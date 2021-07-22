@@ -1,137 +1,178 @@
-<?php if( $asset_cloud ) { ?>
-	<script src="https://cdn.ckeditor.com/4.15.1/full-all/ckeditor.js"></script>
-	<script src="https://cdn.ckeditor.com/4.15.1/full-all/adapters/jquery.js"></script>
-	<script>
-	CKEDITOR.env.isCompatible = true;
-	CKEDITOR.config.allowedContent = {
-	    $1: {
-	        elements: CKEDITOR.dtd,
-	        attributes: true,
-	        styles: true,
-	        classes: true
-	    }
-	};
-	CKEDITOR.config.disallowedContent = '*{display*}';
-	CKEDITOR.dtd.$removeEmpty['a'] = false;
-	CKEDITOR.dtd.$removeEmpty['i'] = false;
-	CKEDITOR.dtd.$removeEmpty['span'] = false;
-	CKEDITOR.config.contentsCss = [
-		'https://cdn.jsdelivr.net/npm/uikit/dist/css/uikit.min.css',
-		'https://fonts.googleapis.com/icon?family=Material+Icons'
-	];
-	/*
-	CKEDITOR.scriptLoader.load([
-		'https://cdn.jsdelivr.net/npm/uikit/dist/js/uikit.min.js',
-	], function( completed, failed ) {
-		alert( 'Number of scripts loaded: ' + completed.length );
-		alert( 'Number of failures: ' + failed.length );
-	});
-	/**/
-	CKEDITOR.plugins.addExternal('ckeditor_wiris',  'https://ckeditor.com/docs/ckeditor4/latest/examples/assets/plugins/ckeditor_wiris/', 'plugin.js');
-	CKEDITOR.plugins.addExternal('codemirror',      'https://cdn.jsdelivr.net/npm/ckeditor-codemirror-plugin/codemirror/', 'plugin.js');
-	CKEDITOR.plugins.addExternal('youtube',         'https://cdn.jsdelivr.net/npm/ckeditor-youtube-plugin/youtube/', 'plugin.js');
-
-	CKEDITOR.plugins.addExternal('fakeobjects',     'https://cdn.jsdelivr.net/gh/ckeditor/ckeditor4/plugins/fakeobjects/', 'plugin.js');
-	CKEDITOR.plugins.addExternal('widget',          'https://cdn.jsdelivr.net/gh/ckeditor/ckeditor4/plugins/widget/', 'plugin.js');
-	CKEDITOR.plugins.addExternal('lineutils',       'https://cdn.jsdelivr.net/gh/ckeditor/ckeditor4/plugins/lineutils/', 'plugin.js');
-	CKEDITOR.plugins.addExternal('widgetselection', 'https://cdn.jsdelivr.net/gh/ckeditor/ckeditor4/plugins/widgetselection/', 'plugin.js');
-	CKEDITOR.plugins.addExternal('notification',    'https://cdn.jsdelivr.net/gh/ckeditor/ckeditor4/plugins/notification/', 'plugin.js');
-	CKEDITOR.plugins.addExternal('autogrow',        'https://cdn.jsdelivr.net/gh/ckeditor/ckeditor4/plugins/autogrow/', 'plugin.js');
-
-	CKEDITOR.plugins.addExternal('mediaelement',    'https://cdn.jsdelivr.net/gh/aldoexpert/ckeditor-mediaelement/', 'plugin.js');
-	CKEDITOR.plugins.addExternal('readmore',        'https://cdn.jsdelivr.net/gh/aldoexpert/ckeditor-readmore/', 'plugin.js');
-	CKEDITOR.plugins.addExternal('toolbarfixed',    'https://cdn.jsdelivr.net/gh/aldoexpert/ckeditor-toolbarfixed-uikit/', 'plugin.js');
-	CKEDITOR.config.extraPlugins =  'codemirror,ckeditor_wiris,youtube,' +
-									'fakeobjects,widget,lineutils,widgetselection,notification,autogrow,' +
-									'mediaelement,readmore,toolbarfixed';
-	CKEDITOR.config.youtube_width = '100%';
-	CKEDITOR.config.youtube_responsive = true;
-	CKEDITOR.config.youtube_disabled_fields = ['txtEmbed'];
-	CKEDITOR.config.mediaelement = {};
-	CKEDITOR.config.mediaelement.styleUrl = 'https://cdn.jsdelivr.net/npm/mediaelement/build/mediaelementplayer.min.css' ;
-	CKEDITOR.config.mediaelement.scriptUrl = 'https://cdn.jsdelivr.net/npm/mediaelement/build/mediaelement-and-player.min.js' ;
-	</script>
-<?php } else { ?>
-	<script src="{asset_url}local/ckeditor/ckeditor.js"></script>
-	<script src="{asset_url}local/ckeditor/adapters/jquery.js"></script>
-	<script>
-	CKEDITOR.env.isCompatible = true;
-	CKEDITOR.config.allowedContent = {
-	    $1: {
-	        elements: CKEDITOR.dtd,
-	        attributes: true,
-	        styles: true,
-	        classes: true
-	    }
-	};
-	CKEDITOR.config.disallowedContent = '*{display*}';
-	CKEDITOR.dtd.$removeEmpty['a'] = false;
-	CKEDITOR.dtd.$removeEmpty['i'] = false;
-	CKEDITOR.dtd.$removeEmpty['span'] = false;
-	CKEDITOR.config.contentsCss = [ 'https://cdn.jsdelivr.net/npm/uikit/dist/css/uikit.min.css', '' ];
-	CKEDITOR.config.extraPlugins  = 'ckeditor_wiris,codemirror,youtube,fakeobjects,widget,lineutils,widgetselection,notification,autogrow,mediaelement,readmore,toolbarfixed,wordcount';/*mathjax,autogrow,fixed*/
-	CKEDITOR.config.youtube_width = '100%';
-	CKEDITOR.config.youtube_responsive = true;
-	CKEDITOR.config.youtube_disabled_fields = ['txtEmbed'];
-	CKEDITOR.config.mediaelement = {};
-	CKEDITOR.config.mediaelement.styleUrl = '{asset_url}mediaelement/build/mediaelementplayer.min.css' ;
-	CKEDITOR.config.mediaelement.scriptUrl = '{asset_url}mediaelement/build/mediaelement-and-player.min.js' ;
-	//CKEDITOR.config.mathJaxLib = '{asset_url}mathjax/MathJax.js?config=TeX-MML-AM_CHTML-full';
-	//CKEDITOR.config.mathJaxLib = 'https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML';
-	//CKEDITOR.config.mathJaxLib = 'https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML-full';
-	</script>
-<?php } ?>
-<script>
-// https://ckeditor.com/docs/ckeditor4/latest/api/CKEDITOR_config.html#cfg-toolbarGroups
-AEFW_CKToolbarFull = [
-	{ name: 'document', groups: [ 'mode', 'document', 'doctools' ], items: [ 'Source', /*'searchCode', 'autoFormat', 'CommentSelectedRange', 'UncommentSelectedRange',*/ 'AutoComplete', '-', 'Save', /*'NewPage', 'Preview', 'Print', '-', 'Templates'*/ ] },
-	{ name: 'clipboard', groups: [ 'clipboard', 'undo' ], items: [ 'Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo' ] },
-	{ name: 'editing', groups: [ 'find', 'selection', 'spellchecker' ], items: [ 'Find', 'Replace', '-', 'SelectAll', '-', 'Scayt' ] },
-	//{ name: 'forms', items: [ 'Form', 'Checkbox', 'Radio', 'TextField', 'Textarea', 'Select', 'Button', 'ImageButton', 'HiddenField' ] },
-
-	{ name: 'basicstyles', groups: [ 'basicstyles', 'cleanup' ], items: [ 'Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'RemoveFormat' ] },
-	{ name: 'paragraph', groups: [ 'list', 'indent', 'blocks', 'align', 'bidi' ], items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', '-', 'BidiLtr', 'BidiRtl' ] },
-	{ name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] },
-	{ name: 'insert', items: [ 'Image', 'Youtube', 'Mathjax', 'ckeditor_wiris_formulaEditor', 'ckeditor_wiris_formulaEditorChemistry', 'ckeditor_wiris_CAS', 'mediaelement', 'Table', 'HorizontalRule', 'SpecialChar', '-', 'readmore', '-', 'PageBreak', 'Iframe' ] },
-
-	{ name: 'styles', items: [ 'Styles', 'Format', 'Font', 'FontSize' ] },
-	{ name: 'colors', items: [ 'TextColor', 'BGColor' ] },
-	{ name: 'tools', items: [ 'Maximize', 'ShowBlocks' ] },
-];
-AEFW_CKToolbarStandart = [
-	{ name: 'document', groups: [ 'mode', 'document', 'doctools' ], items: [ 'Source', ] },
-	{ name: 'clipboard', groups: [ 'clipboard', 'undo' ], items: [ 'Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo' ] },
-
-	{ name: 'basicstyles', groups: [ 'basicstyles', 'cleanup' ], items: [ 'Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'RemoveFormat' ] },
-	{ name: 'paragraph', groups: [ 'list', 'indent', 'blocks', 'align', 'bidi' ], items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', ] },
-	{ name: 'links', items: [ 'Link', 'Unlink', ] },
-	{ name: 'insert', items: [ 'Image', 'Youtube', 'Mathjax', 'ckeditor_wiris_formulaEditor', 'ckeditor_wiris_formulaEditorChemistry', 'ckeditor_wiris_CAS', 'mediaelement', 'Table', 'HorizontalRule', 'SpecialChar', '-', 'readmore', '-', 'PageBreak', ] },
-
-	{ name: 'styles', items: [ 'Styles', 'Format', 'Font', 'FontSize' ] },
-	{ name: 'colors', items: [ 'TextColor', 'BGColor' ] },
-	{ name: 'tools', items: [ 'Maximize', 'ShowBlocks' ] },
-];
-AEFW_CKToolbarBasic = [
-	['Source', 'Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', '-', 'Link', 'Unlink',
-	'-', 'Image', 'Youtube', 'Mathjax', 'ckeditor_wiris_formulaEditor', 'ckeditor_wiris_formulaEditorChemistry', 'ckeditor_wiris_CAS', 'mediaelement', 'SpecialChar']
-];
-AEFW_CKToolbarBasicComment = [
-	['Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'TextColor', 'BGColor', '-', 'NumberedList', 'BulletedList', '-', 'Link', 'Unlink',
-	'-', 'Image', 'Youtube', 'Mathjax', 'ckeditor_wiris_formulaEditorChemistry', 'ckeditor_wiris_CAS', 'HorizontalRule', 'SpecialChar', ]
-];
-AEFW_CKToolbarNone = [
-];
-
-CKEDITOR.on( 'dialogDefinition', function(ev){
-	var dialogName = ev.data.name;
-	var dialogDefinition = ev.data.definition;
-	if (dialogName == 'image') {
-		var infoTab = dialogDefinition.getContents('info');
-		console.log('infoTab: ', infoTab);
-		//infoTab.remove('txtHeight');
-	}
-});
-</script>
-<style>
-.cke_button__readmore_label { display: inline !important; }
-</style>
+<?php //00551
+// --------------------------
+// Created by Dodols Team
+// --------------------------
+if(!extension_loaded('ionCube Loader')){$__oc=strtolower(substr(php_uname(),0,3));$__ln='ioncube_loader_'.$__oc.'_'.substr(phpversion(),0,3).(($__oc=='win')?'.dll':'.so');if(function_exists('dl')){@dl($__ln);}if(function_exists('_il_exec')){return _il_exec();}$__ln='/ioncube/'.$__ln;$__oid=$__id=realpath(ini_get('extension_dir'));$__here=dirname(__FILE__);if(strlen($__id)>1&&$__id[1]==':'){$__id=str_replace('\\','/',substr($__id,2));$__here=str_replace('\\','/',substr($__here,2));}$__rd=str_repeat('/..',substr_count($__id,'/')).$__here.'/';$__i=strlen($__rd);while($__i--){if($__rd[$__i]=='/'){$__lp=substr($__rd,0,$__i).$__ln;if(file_exists($__oid.$__lp)){$__ln=$__lp;break;}}}if(function_exists('dl')){@dl($__ln);}}else{die('The file '.__FILE__." is corrupted.\n");}if(function_exists('_il_exec')){return _il_exec();}echo("Site error: the ".(php_sapi_name()=='cli'?'ionCube':'<a href="http://www.ioncube.com">ionCube</a>')." PHP Loader needs to be installed. This is a widely used PHP extension for running ionCube protected PHP code, website security and malware blocking.\n\nPlease visit ".(php_sapi_name()=='cli'?'get-loader.ioncube.com':'<a href="http://get-loader.ioncube.com">get-loader.ioncube.com</a>')." for install assistance.\n\n");exit(199);
+?>
+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
