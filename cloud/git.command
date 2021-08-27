@@ -26,9 +26,9 @@ do
 	ASSET=${ASSET%%\?*}
 	FILENAME=$(echo "$ASSET" | sed -e 's/\.[^.]*$//')
 	if [ -d "$FILENAME" ]; then
-		rm -rf $FILENAME
+		rm -rf "$FILENAME"
 	fi
-	git clone $URL
+	git clone "$URL"
 done
 
 # BEGIN elFinder build
