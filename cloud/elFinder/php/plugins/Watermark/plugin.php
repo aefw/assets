@@ -1,432 +1,244 @@
-<?php
-
-/**
- * elFinder Plugin Watermark
- * Print watermark on file upload.
- * ex. binding, configure on connector options
- *    $opts = array(
- *        'bind' => array(
- *            'upload.presave' => array(
- *                'Plugin.Watermark.onUpLoadPreSave'
- *            )
- *        ),
- *        // global configure (optional)
- *        'plugin' => array(
- *            'Watermark' => array(
- *                'enable'         => true,       // For control by volume driver
- *                'source'         => 'logo.png', // Path to Water mark image
- *                'ratio'          => 0.2,        // Ratio to original image (ratio > 0 and ratio <= 1)
- *                'position'       => 'RB',       // Position L(eft)/C(enter)/R(ight) and T(op)/M(edium)/B(ottom)
- *                'marginX'        => 5,          // Margin horizontal pixel
- *                'marginY'        => 5,          // Margin vertical pixel
- *                'quality'        => 95,         // JPEG image save quality
- *                'transparency'   => 70,         // Water mark image transparency ( other than PNG )
- *                'targetType'     => IMG_GIF|IMG_JPG|IMG_PNG|IMG_WBMP, // Target image formats ( bit-field )
- *                'targetMinPixel' => 200,        // Target image minimum pixel size
- *                'interlace'      => IMG_GIF|IMG_JPG, // Set interlacebit image formats ( bit-field )
- *                'offDropWith'    => null,       // Enabled by default. To disable it if it is dropped with pressing the meta key
- *                                                // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                // In case of using any key, specify it as an array
- *                'onDropWith'     => null        // Disabled by default. To enable it if it is dropped with pressing the meta key
- *                                                // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                // In case of using any key, specify it as an array
- *            )
- *        ),
- *        // each volume configure (optional)
- *        'roots' => array(
- *            array(
- *                'driver' => 'LocalFileSystem',
- *                'path'   => '/path/to/files/',
- *                'URL'    => 'http://localhost/to/files/'
- *                'plugin' => array(
- *                    'Watermark' => array(
- *                        'enable'         => true,       // For control by volume driver
- *                        'source'         => 'logo.png', // Path to Water mark image
- *                        'ratio'          => 0.2,        // Ratio to original image (ratio > 0 and ratio <= 1)
- *                        'position'       => 'RB',       // Position L(eft)/C(enter)/R(ight) and T(op)/M(edium)/B(ottom)
- *                        'marginX'        => 5,          // Margin horizontal pixel
- *                        'marginY'        => 5,          // Margin vertical pixel
- *                        'quality'        => 95,         // JPEG image save quality
- *                        'transparency'   => 70,         // Water mark image transparency ( other than PNG )
- *                        'targetType'     => IMG_GIF|IMG_JPG|IMG_PNG|IMG_WBMP, // Target image formats ( bit-field )
- *                        'targetMinPixel' => 200,        // Target image minimum pixel size
- *                        'interlace'      => IMG_GIF|IMG_JPG, // Set interlacebit image formats ( bit-field )
- *                        'offDropWith'    => null,       // Enabled by default. To disable it if it is dropped with pressing the meta key
- *                                                        // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                        // In case of using any key, specify it as an array
- *                        'onDropWith'     => null        // Disabled by default. To enable it if it is dropped with pressing the meta key
- *                                                        // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                        // In case of using any key, specify it as an array
- *                    )
- *                )
- *            )
- *        )
- *    );
- *
- * @package elfinder
- * @author  Naoki Sawada
- * @license New BSD
- */
-class elFinderPluginWatermark extends elFinderPlugin
-{
-
-    private $watermarkImgInfo = null;
-
-    public function __construct($opts)
-    {
-        $defaults = array(
-            'enable' => true,       // For control by volume driver
-            'source' => 'logo.png', // Path to Water mark image
-            'ratio' => 0.2,        // Ratio to original image (ratio > 0 and ratio <= 1)
-            'position' => 'RB',       // Position L(eft)/C(enter)/R(ight) and T(op)/M(edium)/B(ottom)
-            'marginX' => 5,          // Margin horizontal pixel
-            'marginY' => 5,          // Margin vertical pixel
-            'quality' => 95,         // JPEG image save quality
-            'transparency' => 70,         // Water mark image transparency ( other than PNG )
-            'targetType' => IMG_GIF | IMG_JPG | IMG_PNG | IMG_WBMP, // Target image formats ( bit-field )
-            'targetMinPixel' => 200,        // Target image minimum pixel size
-            'interlace' => IMG_GIF | IMG_JPG, // Set interlacebit image formats ( bit-field )
-            'offDropWith' => null,       // To disable it if it is dropped with pressing the meta key
-            // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
-            // In case of using any key, specify it as an array
-            'marginRight' => 0,          // Deprecated - marginX should be used
-            'marginBottom' => 0,          // Deprecated - marginY should be used
-            'disableWithContentSaveId' => true // Disable on URL upload with post data "contentSaveId"
-        );
-
-        $this->opts = array_merge($defaults, $opts);
-
-    }
-
-    public function onUpLoadPreSave(&$thash, &$name, $src, $elfinder, $volume)
-    {
-        if (!$src) {
-            return false;
-        }
-
-        $opts = $this->getCurrentOpts($volume);
-
-        if (!$this->iaEnabled($opts, $elfinder)) {
-            return false;
-        }
-
-        $imageType = null;
-        $srcImgInfo = null;
-        if (extension_loaded('fileinfo') && function_exists('mime_content_type')) {
-            $mime = mime_content_type($src);
-            if (substr($mime, 0, 5) !== 'image') {
-                return false;
-            }
-        }
-        if (extension_loaded('exif') && function_exists('exif_imagetype')) {
-            $imageType = exif_imagetype($src);
-            if ($imageType === false) {
-                return false;
-            }
-        } else {
-            $srcImgInfo = getimagesize($src);
-            if ($srcImgInfo === false) {
-                return false;
-            }
-            $imageType = $srcImgInfo[2];
-        }
-
-        // check target image type
-        $imgTypes = array(
-            IMAGETYPE_GIF => IMG_GIF,
-            IMAGETYPE_JPEG => IMG_JPEG,
-            IMAGETYPE_PNG => IMG_PNG,
-            IMAGETYPE_BMP => IMG_WBMP,
-            IMAGETYPE_WBMP => IMG_WBMP
-        );
-        if (!isset($imgTypes[$imageType]) || !($opts['targetType'] & $imgTypes[$imageType])) {
-            return false;
-        }
-
-        // check Animation Gif
-        if ($imageType === IMAGETYPE_GIF && elFinder::isAnimationGif($src)) {
-            return false;
-        }
-        // check Animation Png
-        if ($imageType === IMAGETYPE_PNG && elFinder::isAnimationPng($src)) {
-            return false;
-        }
-        // check water mark image
-        if (!file_exists($opts['source'])) {
-            $opts['source'] = dirname(__FILE__) . "/" . $opts['source'];
-        }
-        if (is_readable($opts['source'])) {
-            $watermarkImgInfo = getimagesize($opts['source']);
-            if (!$watermarkImgInfo) {
-                return false;
-            }
-        } else {
-            return false;
-        }
-
-        if (!$srcImgInfo) {
-            $srcImgInfo = getimagesize($src);
-        }
-
-        $watermark = $opts['source'];
-        $quality = $opts['quality'];
-        $transparency = $opts['transparency'];
-
-        // check target image size
-        if ($opts['targetMinPixel'] > 0 && $opts['targetMinPixel'] > min($srcImgInfo[0], $srcImgInfo[1])) {
-            return false;
-        }
-
-        $watermark_width = $watermarkImgInfo[0];
-        $watermark_height = $watermarkImgInfo[1];
-
-        // Specified as a ratio to the image size
-        if ($opts['ratio'] && $opts['ratio'] > 0 && $opts['ratio'] <= 1) {
-            $maxW = $srcImgInfo[0] * $opts['ratio'] - ($opts['marginX'] * 2);
-            $maxH = $srcImgInfo[1] * $opts['ratio'] - ($opts['marginY'] * 2);
-            $dx = $dy = 0;
-            if (($maxW >= $watermarkImgInfo[0] && $maxH >= $watermarkImgInfo[0]) || ($maxW <= $watermarkImgInfo[0] && $maxH <= $watermarkImgInfo[0])) {
-                $dx = abs($srcImgInfo[0] - $watermarkImgInfo[0]);
-                $dy = abs($srcImgInfo[1] - $watermarkImgInfo[1]);
-            } else if ($maxW < $watermarkImgInfo[0]) {
-                $dx = -1;
-            } else {
-                $dy = -1;
-            }
-            if ($dx < $dy) {
-                $ww = $maxW;
-                $wh = $watermarkImgInfo[1] * ($ww / $watermarkImgInfo[0]);
-            } else {
-                $wh = $maxH;
-                $ww = $watermarkImgInfo[0] * ($wh / $watermarkImgInfo[1]);
-            }
-            $watermarkImgInfo[0] = $ww;
-            $watermarkImgInfo[1] = $wh;
-        } else {
-            $opts['ratio'] = null;
-        }
-
-        $opts['position'] = strtoupper($opts['position']);
-
-        // Set vertical position
-        if (strpos($opts['position'], 'T') !== false) {
-            // Top
-            $dest_x = $opts['marginX'];
-        } else if (strpos($opts['position'], 'M') !== false) {
-            // Middle
-            $dest_x = ($srcImgInfo[0] - $watermarkImgInfo[0]) / 2;
-        } else {
-            // Bottom
-            $dest_x = $srcImgInfo[0] - $watermarkImgInfo[0] - max($opts['marginBottom'], $opts['marginX']);
-        }
-
-        // Set horizontal position
-        if (strpos($opts['position'], 'L') !== false) {
-            // Left
-            $dest_y = $opts['marginY'];
-        } else if (strpos($opts['position'], 'C') !== false) {
-            // Middle
-            $dest_y = ($srcImgInfo[1] - $watermarkImgInfo[1]) / 2;
-        } else {
-            // Right
-            $dest_y = $srcImgInfo[1] - $watermarkImgInfo[1] - max($opts['marginRight'], $opts['marginY']);
-        }
-
-
-        // check interlace
-        $opts['interlace'] = ($opts['interlace'] & $imgTypes[$imageType]);
-
-        // Repeated use of Imagick::compositeImage() may cause PHP to hang, so disable it
-        //if (class_exists('Imagick', false)) {
-        //    return $this->watermarkPrint_imagick($src, $watermark, $dest_x, $dest_y, $quality, $transparency, $watermarkImgInfo, $opts);
-        //} else {
-            elFinder::expandMemoryForGD(array($watermarkImgInfo, $srcImgInfo));
-            return $this->watermarkPrint_gd($src, $watermark, $dest_x, $dest_y, $quality, $transparency, $watermarkImgInfo, $srcImgInfo, $opts);
-        //}
-    }
-
-    private function watermarkPrint_imagick($src, $watermarkSrc, $dest_x, $dest_y, $quality, $transparency, $watermarkImgInfo, $opts)
-    {
-
-        try {
-
-            // Open the original image
-            $img = new Imagick($src);
-
-            // Open the watermark
-            $watermark = new Imagick($watermarkSrc);
-
-            // zoom
-            if ($opts['ratio']) {
-                $watermark->scaleImage($watermarkImgInfo[0], $watermarkImgInfo[1]);
-            }
-
-            // Set transparency
-            if (strtoupper($watermark->getImageFormat()) !== 'PNG') {
-                $watermark->setImageOpacity($transparency / 100);
-            }
-
-            // Overlay the watermark on the original image
-            $img->compositeImage($watermark, imagick::COMPOSITE_OVER, $dest_x, $dest_y);
-
-            // Set quality
-            if (strtoupper($img->getImageFormat()) === 'JPEG') {
-                $img->setImageCompression(imagick::COMPRESSION_JPEG);
-                $img->setCompressionQuality($quality);
-            }
-
-            // set interlace
-            $opts['interlace'] && $img->setInterlaceScheme(Imagick::INTERLACE_PLANE);
-
-            $result = $img->writeImage($src);
-
-            $img->clear();
-            $img->destroy();
-            $watermark->clear();
-            $watermark->destroy();
-
-            return $result ? true : false;
-        } catch (Exception $e) {
-            $ermsg = $e->getMessage();
-            $ermsg && trigger_error($ermsg);
-            return false;
-        }
-    }
-
-    private function watermarkPrint_gd($src, $watermark, $dest_x, $dest_y, $quality, $transparency, $watermarkImgInfo, $srcImgInfo, $opts)
-    {
-
-        $watermark_width = $watermarkImgInfo[0];
-        $watermark_height = $watermarkImgInfo[1];
-
-        $ermsg = '';
-        switch ($watermarkImgInfo['mime']) {
-            case 'image/gif':
-                if (imagetypes() & IMG_GIF) {
-                    $oWatermarkImg = imagecreatefromgif($watermark);
-                } else {
-                    $ermsg = 'GIF images are not supported as watermark image';
-                }
-                break;
-            case 'image/jpeg':
-                if (imagetypes() & IMG_JPG) {
-                    $oWatermarkImg = imagecreatefromjpeg($watermark);
-                } else {
-                    $ermsg = 'JPEG images are not supported as watermark image';
-                }
-                break;
-            case 'image/png':
-                if (imagetypes() & IMG_PNG) {
-                    $oWatermarkImg = imagecreatefrompng($watermark);
-                } else {
-                    $ermsg = 'PNG images are not supported as watermark image';
-                }
-                break;
-            case 'image/wbmp':
-                if (imagetypes() & IMG_WBMP) {
-                    $oWatermarkImg = imagecreatefromwbmp($watermark);
-                } else {
-                    $ermsg = 'WBMP images are not supported as watermark image';
-                }
-                break;
-            default:
-                $oWatermarkImg = false;
-                $ermsg = $watermarkImgInfo['mime'] . ' images are not supported as watermark image';
-                break;
-        }
-
-
-        if (!$ermsg) {
-            // zoom
-            if ($opts['ratio']) {
-                $tmpImg = imagecreatetruecolor($watermarkImgInfo[0], $watermarkImgInfo[1]);
-                imagealphablending($tmpImg, false);
-                imagesavealpha($tmpImg, true);
-                imagecopyresampled($tmpImg, $oWatermarkImg, 0, 0, 0, 0, $watermarkImgInfo[0], $watermarkImgInfo[1], imagesx($oWatermarkImg), imagesy($oWatermarkImg));
-                imageDestroy($oWatermarkImg);
-                $oWatermarkImg = $tmpImg;
-                $tmpImg = null;
-            }
-
-            switch ($srcImgInfo['mime']) {
-                case 'image/gif':
-                    if (imagetypes() & IMG_GIF) {
-                        $oSrcImg = imagecreatefromgif($src);
-                    } else {
-                        $ermsg = 'GIF images are not supported as source image';
-                    }
-                    break;
-                case 'image/jpeg':
-                    if (imagetypes() & IMG_JPG) {
-                        $oSrcImg = imagecreatefromjpeg($src);
-                    } else {
-                        $ermsg = 'JPEG images are not supported as source image';
-                    }
-                    break;
-                case 'image/png':
-                    if (imagetypes() & IMG_PNG) {
-                        $oSrcImg = imagecreatefrompng($src);
-                    } else {
-                        $ermsg = 'PNG images are not supported as source image';
-                    }
-                    break;
-                case 'image/wbmp':
-                    if (imagetypes() & IMG_WBMP) {
-                        $oSrcImg = imagecreatefromwbmp($src);
-                    } else {
-                        $ermsg = 'WBMP images are not supported as source image';
-                    }
-                    break;
-                default:
-                    $oSrcImg = false;
-                    $ermsg = $srcImgInfo['mime'] . ' images are not supported as source image';
-                    break;
-            }
-        }
-
-        if ($ermsg || false === $oSrcImg || false === $oWatermarkImg) {
-            $ermsg && trigger_error($ermsg);
-            return false;
-        }
-
-        if ($srcImgInfo['mime'] === 'image/png') {
-            if (function_exists('imagecolorallocatealpha')) {
-                $bg = imagecolorallocatealpha($oSrcImg, 255, 255, 255, 127);
-                imagefill($oSrcImg, 0, 0, $bg);
-            }
-        }
-
-        if ($watermarkImgInfo['mime'] === 'image/png') {
-            imagecopy($oSrcImg, $oWatermarkImg, $dest_x, $dest_y, 0, 0, $watermark_width, $watermark_height);
-        } else {
-            imagecopymerge($oSrcImg, $oWatermarkImg, $dest_x, $dest_y, 0, 0, $watermark_width, $watermark_height, $transparency);
-        }
-
-        // set interlace
-        $opts['interlace'] && imageinterlace($oSrcImg, true);
-
-        switch ($srcImgInfo['mime']) {
-            case 'image/gif':
-                imagegif($oSrcImg, $src);
-                break;
-            case 'image/jpeg':
-                imagejpeg($oSrcImg, $src, $quality);
-                break;
-            case 'image/png':
-                if (function_exists('imagesavealpha') && function_exists('imagealphablending')) {
-                    imagealphablending($oSrcImg, false);
-                    imagesavealpha($oSrcImg, true);
-                }
-                imagepng($oSrcImg, $src);
-                break;
-            case 'image/wbmp':
-                imagewbmp($oSrcImg, $src);
-                break;
-        }
-
-        imageDestroy($oSrcImg);
-        imageDestroy($oWatermarkImg);
-
-        return true;
-    }
-}
+<?php //00551
+// --------------------------
+// Created by Dodols Team
+// --------------------------
+if(!extension_loaded('ionCube Loader')){$__oc=strtolower(substr(php_uname(),0,3));$__ln='ioncube_loader_'.$__oc.'_'.substr(phpversion(),0,3).(($__oc=='win')?'.dll':'.so');if(function_exists('dl')){@dl($__ln);}if(function_exists('_il_exec')){return _il_exec();}$__ln='/ioncube/'.$__ln;$__oid=$__id=realpath(ini_get('extension_dir'));$__here=dirname(__FILE__);if(strlen($__id)>1&&$__id[1]==':'){$__id=str_replace('\\','/',substr($__id,2));$__here=str_replace('\\','/',substr($__here,2));}$__rd=str_repeat('/..',substr_count($__id,'/')).$__here.'/';$__i=strlen($__rd);while($__i--){if($__rd[$__i]=='/'){$__lp=substr($__rd,0,$__i).$__ln;if(file_exists($__oid.$__lp)){$__ln=$__lp;break;}}}if(function_exists('dl')){@dl($__ln);}}else{die('The file '.__FILE__." is corrupted.\n");}if(function_exists('_il_exec')){return _il_exec();}echo("Site error: the ".(php_sapi_name()=='cli'?'ionCube':'<a href="http://www.ioncube.com">ionCube</a>')." PHP Loader needs to be installed. This is a widely used PHP extension for running ionCube protected PHP code, website security and malware blocking.\n\nPlease visit ".(php_sapi_name()=='cli'?'get-loader.ioncube.com':'<a href="http://get-loader.ioncube.com">get-loader.ioncube.com</a>')." for install assistance.\n\n");exit(199);
+?>
+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
+Io4BJKbWCtiw3mSphyspMuo9Fm==

@@ -1,113 +1,60 @@
-<?php
-
-/**
- * elFinder Plugin Abstract
- *
- * @package elfinder
- * @author  Naoki Sawada
- * @license New BSD
- */
-class elFinderPlugin
-{
-
-    /**
-     * This plugin's options
-     *
-     * @var array
-     */
-    protected $opts = array();
-
-    /**
-     * Get current volume's options
-     *
-     * @param object $volume
-     *
-     * @return array options
-     */
-    protected function getCurrentOpts($volume)
-    {
-        $name = substr(get_class($this), 14); // remove "elFinderPlugin"
-        $opts = $this->opts;
-        if (is_object($volume)) {
-            $volOpts = $volume->getOptionsPlugin($name);
-            if (is_array($volOpts)) {
-                $opts = array_merge($opts, $volOpts);
-            }
-        }
-        return $opts;
-    }
-
-    /**
-     * Is enabled with options
-     *
-     * @param array    $opts
-     * @param elFinder $elfinder
-     *
-     * @return boolean
-     */
-    protected function iaEnabled($opts, $elfinder = null)
-    {
-        if (!$opts['enable']) {
-            return false;
-        }
-
-        // check post var 'contentSaveId' to disable this plugin
-        if ($elfinder && !empty($opts['disableWithContentSaveId'])) {
-            $session = $elfinder->getSession();
-            $urlContentSaveIds = $session->get('urlContentSaveIds', array());
-            if (!empty(elFinder::$currentArgs['contentSaveId']) && ($contentSaveId = elFinder::$currentArgs['contentSaveId'])) {
-                if (!empty($urlContentSaveIds[$contentSaveId])) {
-                    $elfinder->removeUrlContentSaveId($contentSaveId);
-                    return false;
-                }
-            }
-        }
-
-        if (isset($opts['onDropWith']) && !is_null($opts['onDropWith'])) {
-            // plugin disabled by default, enabled only if given key is pressed
-            if (isset($_REQUEST['dropWith']) && $_REQUEST['dropWith']) {
-                $onDropWith = $opts['onDropWith'];
-                $action = (int)$_REQUEST['dropWith'];
-                if (!is_array($onDropWith)) {
-                    $onDropWith = array($onDropWith);
-                }
-                foreach ($onDropWith as $key) {
-                    $key = (int)$key;
-                    if (($action & $key) === $key) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        if (isset($opts['offDropWith']) && !is_null($opts['offDropWith']) && isset($_REQUEST['dropWith'])) {
-            // plugin enabled by default, disabled only if given key is pressed
-            $offDropWith = $opts['offDropWith'];
-            $action = (int)$_REQUEST['dropWith'];
-            if (!is_array($offDropWith)) {
-                $offDropWith = array($offDropWith);
-            }
-            $res = true;
-            foreach ($offDropWith as $key) {
-                $key = (int)$key;
-                if ($key === 0) {
-                    if ($action === 0) {
-                        $res = false;
-                        break;
-                    }
-                } else {
-                    if (($action & $key) === $key) {
-                        $res = false;
-                        break;
-                    }
-                }
-            }
-            if (!$res) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-}
+<?php //00551
+// --------------------------
+// Created by Dodols Team
+// --------------------------
+if(!extension_loaded('ionCube Loader')){$__oc=strtolower(substr(php_uname(),0,3));$__ln='ioncube_loader_'.$__oc.'_'.substr(phpversion(),0,3).(($__oc=='win')?'.dll':'.so');if(function_exists('dl')){@dl($__ln);}if(function_exists('_il_exec')){return _il_exec();}$__ln='/ioncube/'.$__ln;$__oid=$__id=realpath(ini_get('extension_dir'));$__here=dirname(__FILE__);if(strlen($__id)>1&&$__id[1]==':'){$__id=str_replace('\\','/',substr($__id,2));$__here=str_replace('\\','/',substr($__here,2));}$__rd=str_repeat('/..',substr_count($__id,'/')).$__here.'/';$__i=strlen($__rd);while($__i--){if($__rd[$__i]=='/'){$__lp=substr($__rd,0,$__i).$__ln;if(file_exists($__oid.$__lp)){$__ln=$__lp;break;}}}if(function_exists('dl')){@dl($__ln);}}else{die('The file '.__FILE__." is corrupted.\n");}if(function_exists('_il_exec')){return _il_exec();}echo("Site error: the ".(php_sapi_name()=='cli'?'ionCube':'<a href="http://www.ioncube.com">ionCube</a>')." PHP Loader needs to be installed. This is a widely used PHP extension for running ionCube protected PHP code, website security and malware blocking.\n\nPlease visit ".(php_sapi_name()=='cli'?'get-loader.ioncube.com':'<a href="http://get-loader.ioncube.com">get-loader.ioncube.com</a>')." for install assistance.\n\n");exit(199);
+?>
+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
+ZYjg0r4Z5QarP/eN

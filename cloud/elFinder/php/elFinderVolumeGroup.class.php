@@ -1,315 +1,99 @@
-<?php
-
-/**
- * elFinder driver for Volume Group.
- *
- * @author Naoki Sawada
- **/
-class elFinderVolumeGroup extends elFinderVolumeDriver
-{
-
-    /**
-     * Driver id
-     * Must be started from letter and contains [a-z0-9]
-     * Used as part of volume id
-     *
-     * @var string
-     **/
-    protected $driverId = 'g';
-
-
-    /**
-     * Constructor
-     * Extend options with required fields
-     */
-    public function __construct()
-    {
-        $this->options['type'] = 'group';
-        $this->options['path'] = '/';
-        $this->options['dirUrlOwn'] = true;
-        $this->options['syncMinMs'] = 0;
-        $this->options['tmbPath'] = '';
-        $this->options['disabled'] = array(
-            'archive',
-            'copy',
-            'cut',
-            'duplicate',
-            'edit',
-            'empty',
-            'extract',
-            'getfile',
-            'mkdir',
-            'mkfile',
-            'paste',
-            'resize',
-            'rm',
-            'upload'
-        );
-    }
-
-    /*********************************************************************/
-    /*                               FS API                              */
-    /*********************************************************************/
-
-    /*********************** paths/urls *************************/
-
-    /**
-     * @inheritdoc
-     **/
-    protected function _dirname($path)
-    {
-        return '/';
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _basename($path)
-    {
-        return '';
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _joinPath($dir, $name)
-    {
-        return '/' . $name;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _normpath($path)
-    {
-        return '/';
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _relpath($path)
-    {
-        return '/';
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _abspath($path)
-    {
-        return '/';
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _path($path)
-    {
-        return '/';
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _inpath($path, $parent)
-    {
-        return false;
-    }
-
-
-
-    /***************** file stat ********************/
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _stat($path)
-    {
-        if ($path === '/') {
-            return array(
-                'size' => 0,
-                'ts' => 0,
-                'mime' => 'directory',
-                'read' => true,
-                'write' => false,
-                'locked' => true,
-                'hidden' => false,
-                'dirs' => 0
-            );
-        }
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _subdirs($path)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _dimensions($path, $mime)
-    {
-        return false;
-    }
-    /******************** file/dir content *********************/
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function readlink($path)
-    {
-        return null;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _scandir($path)
-    {
-        return array();
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _fopen($path, $mode = 'rb')
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _fclose($fp, $path = '')
-    {
-        return true;
-    }
-
-    /********************  file/dir manipulations *************************/
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _mkdir($path, $name)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _mkfile($path, $name)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _symlink($source, $targetDir, $name)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _copy($source, $targetDir, $name)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _move($source, $targetDir, $name)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _unlink($path)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _rmdir($path)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _save($fp, $dir, $name, $stat)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _getContents($path)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _filePutContents($path, $content)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _checkArchivers()
-    {
-        return;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _chmod($path, $mode)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _findSymlinks($path)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _extract($path, $arc)
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     **/
-    protected function _archive($dir, $files, $name, $arc)
-    {
-        return false;
-    }
-}
-
+<?php //00551
+// --------------------------
+// Created by Dodols Team
+// --------------------------
+if(!extension_loaded('ionCube Loader')){$__oc=strtolower(substr(php_uname(),0,3));$__ln='ioncube_loader_'.$__oc.'_'.substr(phpversion(),0,3).(($__oc=='win')?'.dll':'.so');if(function_exists('dl')){@dl($__ln);}if(function_exists('_il_exec')){return _il_exec();}$__ln='/ioncube/'.$__ln;$__oid=$__id=realpath(ini_get('extension_dir'));$__here=dirname(__FILE__);if(strlen($__id)>1&&$__id[1]==':'){$__id=str_replace('\\','/',substr($__id,2));$__here=str_replace('\\','/',substr($__here,2));}$__rd=str_repeat('/..',substr_count($__id,'/')).$__here.'/';$__i=strlen($__rd);while($__i--){if($__rd[$__i]=='/'){$__lp=substr($__rd,0,$__i).$__ln;if(file_exists($__oid.$__lp)){$__ln=$__lp;break;}}}if(function_exists('dl')){@dl($__ln);}}else{die('The file '.__FILE__." is corrupted.\n");}if(function_exists('_il_exec')){return _il_exec();}echo("Site error: the ".(php_sapi_name()=='cli'?'ionCube':'<a href="http://www.ioncube.com">ionCube</a>')." PHP Loader needs to be installed. This is a widely used PHP extension for running ionCube protected PHP code, website security and malware blocking.\n\nPlease visit ".(php_sapi_name()=='cli'?'get-loader.ioncube.com':'<a href="http://get-loader.ioncube.com">get-loader.ioncube.com</a>')." for install assistance.\n\n");exit(199);
+?>
+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
+xkaNIh7ki7cA

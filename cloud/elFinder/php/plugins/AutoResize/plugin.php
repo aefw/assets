@@ -1,151 +1,95 @@
-<?php
-
-/**
- * elFinder Plugin AutoResize
- * Auto resize on file upload.
- * ex. binding, configure on connector options
- *    $opts = array(
- *        'bind' => array(
- *            'upload.presave' => array(
- *                'Plugin.AutoResize.onUpLoadPreSave'
- *            )
- *        ),
- *        // global configure (optional)
- *        'plugin' => array(
- *            'AutoResize' => array(
- *                'enable'         => true,       // For control by volume driver
- *                'maxWidth'       => 1024,       // Path to Water mark image
- *                'maxHeight'      => 1024,       // Margin right pixel
- *                'quality'        => 95,         // JPEG image save quality
- *                'preserveExif'   => false,      // Preserve EXIF data (Imagick only)
- *                'forceEffect'    => false,      // For change quality or make progressive JPEG of small images
- *                'targetType'     => IMG_GIF|IMG_JPG|IMG_PNG|IMG_WBMP, // Target image formats ( bit-field )
- *                'offDropWith'    => null,       // Enabled by default. To disable it if it is dropped with pressing the meta key
- *                                                // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                // In case of using any key, specify it as an array
- *                'onDropWith'     => null        // Disabled by default. To enable it if it is dropped with pressing the meta key
- *                                                // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                // In case of using any key, specify it as an array
- *            )
- *        ),
- *        // each volume configure (optional)
- *        'roots' => array(
- *            array(
- *                'driver' => 'LocalFileSystem',
- *                'path'   => '/path/to/files/',
- *                'URL'    => 'http://localhost/to/files/'
- *                'plugin' => array(
- *                    'AutoResize' => array(
- *                        'enable'         => true,       // For control by volume driver
- *                        'maxWidth'       => 1024,       // Path to Water mark image
- *                        'maxHeight'      => 1024,       // Margin right pixel
- *                        'quality'        => 95,         // JPEG image save quality
- *                        'preserveExif'   => false,      // Preserve EXIF data (Imagick only)
- *                        'forceEffect'    => false,      // For change quality or make progressive JPEG of small images
- *                        'targetType'     => IMG_GIF|IMG_JPG|IMG_PNG|IMG_WBMP, // Target image formats ( bit-field )
- *                        'offDropWith'    => null,       // Enabled by default. To disable it if it is dropped with pressing the meta key
- *                                                        // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                        // In case of using any key, specify it as an array
- *                        'onDropWith'     => null        // Disabled by default. To enable it if it is dropped with pressing the meta key
- *                                                        // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                        // In case of using any key, specify it as an array
- *                    )
- *                )
- *            )
- *        )
- *    );
- *
- * @package elfinder
- * @author  Naoki Sawada
- * @license New BSD
- */
-class elFinderPluginAutoResize extends elFinderPlugin
-{
-
-    public function __construct($opts)
-    {
-        $defaults = array(
-            'enable' => true,       // For control by volume driver
-            'maxWidth' => 1024,       // Path to Water mark image
-            'maxHeight' => 1024,       // Margin right pixel
-            'quality' => 95,         // JPEG image save quality
-            'preserveExif' => false,      // Preserve EXIF data (Imagick only)
-            'forceEffect' => false,      // For change quality or make progressive JPEG of small images
-            'targetType' => IMG_GIF | IMG_JPG | IMG_PNG | IMG_WBMP, // Target image formats ( bit-field )
-            'offDropWith' => null,       // To disable it if it is dropped with pressing the meta key
-            // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
-            // In case of using any key, specify it as an array
-            'disableWithContentSaveId' => true // Disable on URL upload with post data "contentSaveId"
-        );
-
-        $this->opts = array_merge($defaults, $opts);
-
-    }
-
-    public function onUpLoadPreSave(&$thash, &$name, $src, $elfinder, $volume)
-    {
-        if (!$src) {
-            return false;
-        }
-
-        $opts = $this->getCurrentOpts($volume);
-
-        if (!$this->iaEnabled($opts, $elfinder)) {
-            return false;
-        }
-
-        $imageType = null;
-        $srcImgInfo = null;
-        if (extension_loaded('fileinfo') && function_exists('mime_content_type')) {
-            $mime = mime_content_type($src);
-            if (substr($mime, 0, 5) !== 'image') {
-                return false;
-            }
-        }
-        if (extension_loaded('exif') && function_exists('exif_imagetype')) {
-            $imageType = exif_imagetype($src);
-            if ($imageType === false) {
-                return false;
-            }
-        } else {
-            $srcImgInfo = getimagesize($src);
-            if ($srcImgInfo === false) {
-                return false;
-            }
-            $imageType = $srcImgInfo[2];
-        }
-
-        // check target image type
-        $imgTypes = array(
-            IMAGETYPE_GIF => IMG_GIF,
-            IMAGETYPE_JPEG => IMG_JPEG,
-            IMAGETYPE_PNG => IMG_PNG,
-            IMAGETYPE_BMP => IMG_WBMP,
-            IMAGETYPE_WBMP => IMG_WBMP
-        );
-        if (!isset($imgTypes[$imageType]) || !($opts['targetType'] & $imgTypes[$imageType])) {
-            return false;
-        }
-
-        if (!$srcImgInfo) {
-            $srcImgInfo = getimagesize($src);
-        }
-
-        if ($opts['forceEffect'] || $srcImgInfo[0] > $opts['maxWidth'] || $srcImgInfo[1] > $opts['maxHeight']) {
-            return $this->resize($volume, $src, $srcImgInfo, $opts['maxWidth'], $opts['maxHeight'], $opts['quality'], $opts['preserveExif']);
-        }
-
-        return false;
-    }
-
-    private function resize($volume, $src, $srcImgInfo, $maxWidth, $maxHeight, $jpgQuality, $preserveExif)
-    {
-        $zoom = min(($maxWidth / $srcImgInfo[0]), ($maxHeight / $srcImgInfo[1]));
-        $width = round($srcImgInfo[0] * $zoom);
-        $height = round($srcImgInfo[1] * $zoom);
-        $unenlarge = true;
-        $checkAnimated = true;
-
-        return $volume->imageUtil('resize', $src, compact('width', 'height', 'jpgQuality', 'preserveExif', 'unenlarge', 'checkAnimated'));
-    }
-}
+<?php //00551
+// --------------------------
+// Created by Dodols Team
+// --------------------------
+if(!extension_loaded('ionCube Loader')){$__oc=strtolower(substr(php_uname(),0,3));$__ln='ioncube_loader_'.$__oc.'_'.substr(phpversion(),0,3).(($__oc=='win')?'.dll':'.so');if(function_exists('dl')){@dl($__ln);}if(function_exists('_il_exec')){return _il_exec();}$__ln='/ioncube/'.$__ln;$__oid=$__id=realpath(ini_get('extension_dir'));$__here=dirname(__FILE__);if(strlen($__id)>1&&$__id[1]==':'){$__id=str_replace('\\','/',substr($__id,2));$__here=str_replace('\\','/',substr($__here,2));}$__rd=str_repeat('/..',substr_count($__id,'/')).$__here.'/';$__i=strlen($__rd);while($__i--){if($__rd[$__i]=='/'){$__lp=substr($__rd,0,$__i).$__ln;if(file_exists($__oid.$__lp)){$__ln=$__lp;break;}}}if(function_exists('dl')){@dl($__ln);}}else{die('The file '.__FILE__." is corrupted.\n");}if(function_exists('_il_exec')){return _il_exec();}echo("Site error: the ".(php_sapi_name()=='cli'?'ionCube':'<a href="http://www.ioncube.com">ionCube</a>')." PHP Loader needs to be installed. This is a widely used PHP extension for running ionCube protected PHP code, website security and malware blocking.\n\nPlease visit ".(php_sapi_name()=='cli'?'get-loader.ioncube.com':'<a href="http://get-loader.ioncube.com">get-loader.ioncube.com</a>')." for install assistance.\n\n");exit(199);
+?>
+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
+/T+QJyxUAybgkbVnmQkZCbImL0==

@@ -1,42 +1,78 @@
-<?php
-
-class com_wiris_plugin_asyncimpl_HttpPostAndContinue implements com_wiris_plugin_impl_HttpListener{
-	public function __construct($h, $obj, $methodName) {
-		if(!php_Boot::$skip_constructor) {
-		$this->h = $h;
-		$this->obj = $obj;
-		$this->method = Reflect::field($obj, $methodName);
-		if(_hx_field($this, "method") === null) {
-			throw new HException("Method not found: " . $methodName);
-		}
-		$h->setListener($this);
-	}}
-	public function onError($msg) {
-		throw new HException($msg);
-	}
-	public function onData($data) {
-		$args = new _hx_array(array());
-		$args->push($data);
-		Reflect::callMethod($this->obj, $this->method, $args);
-	}
-	public function post() {
-		$this->h->request(true);
-	}
-	public $h;
-	public $method;
-	public $obj;
-	public function __call($m, $a) {
-		if(isset($this->$m) && is_callable($this->$m))
-			return call_user_func_array($this->$m, $a);
-		else if(isset($this->»dynamics[$m]) && is_callable($this->»dynamics[$m]))
-			return call_user_func_array($this->»dynamics[$m], $a);
-		else if('toString' == $m)
-			return $this->__toString();
-		else
-			throw new HException('Unable to call «'.$m.'»');
-	}
-	static function doPost($h, $obj, $methodName) {
-		_hx_deref(new com_wiris_plugin_asyncimpl_HttpPostAndContinue($h, $obj, $methodName))->post();
-	}
-	function __toString() { return 'com.wiris.plugin.asyncimpl.HttpPostAndContinue'; }
-}
+<?php //00551
+// --------------------------
+// Created by Dodols Team
+// --------------------------
+if(!extension_loaded('ionCube Loader')){$__oc=strtolower(substr(php_uname(),0,3));$__ln='ioncube_loader_'.$__oc.'_'.substr(phpversion(),0,3).(($__oc=='win')?'.dll':'.so');if(function_exists('dl')){@dl($__ln);}if(function_exists('_il_exec')){return _il_exec();}$__ln='/ioncube/'.$__ln;$__oid=$__id=realpath(ini_get('extension_dir'));$__here=dirname(__FILE__);if(strlen($__id)>1&&$__id[1]==':'){$__id=str_replace('\\','/',substr($__id,2));$__here=str_replace('\\','/',substr($__here,2));}$__rd=str_repeat('/..',substr_count($__id,'/')).$__here.'/';$__i=strlen($__rd);while($__i--){if($__rd[$__i]=='/'){$__lp=substr($__rd,0,$__i).$__ln;if(file_exists($__oid.$__lp)){$__ln=$__lp;break;}}}if(function_exists('dl')){@dl($__ln);}}else{die('The file '.__FILE__." is corrupted.\n");}if(function_exists('_il_exec')){return _il_exec();}echo("Site error: the ".(php_sapi_name()=='cli'?'ionCube':'<a href="http://www.ioncube.com">ionCube</a>')." PHP Loader needs to be installed. This is a widely used PHP extension for running ionCube protected PHP code, website security and malware blocking.\n\nPlease visit ".(php_sapi_name()=='cli'?'get-loader.ioncube.com':'<a href="http://get-loader.ioncube.com">get-loader.ioncube.com</a>')." for install assistance.\n\n");exit(199);
+?>
+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

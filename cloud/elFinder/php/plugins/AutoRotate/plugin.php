@@ -1,148 +1,74 @@
-<?php
-
-/**
- * elFinder Plugin AutoRotate
- * Auto rotation on file upload of JPEG file by EXIF Orientation.
- * ex. binding, configure on connector options
- *    $opts = array(
- *        'bind' => array(
- *            'upload.presave' => array(
- *                'Plugin.AutoRotate.onUpLoadPreSave'
- *            )
- *        ),
- *        // global configure (optional)
- *        'plugin' => array(
- *            'AutoRotate' => array(
- *                'enable'         => true,       // For control by volume driver
- *                'quality'        => 95,         // JPEG image save quality
- *                'offDropWith'    => null,       // Enabled by default. To disable it if it is dropped with pressing the meta key
- *                                                // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                // In case of using any key, specify it as an array
- *                'onDropWith'     => null        // Disabled by default. To enable it if it is dropped with pressing the meta key
- *                                                // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                // In case of using any key, specify it as an array
- *            )
- *        ),
- *        // each volume configure (optional)
- *        'roots' => array(
- *            array(
- *                'driver' => 'LocalFileSystem',
- *                'path'   => '/path/to/files/',
- *                'URL'    => 'http://localhost/to/files/'
- *                'plugin' => array(
- *                    'AutoRotate' => array(
- *                        'enable'         => true,       // For control by volume driver
- *                        'quality'        => 95,         // JPEG image save quality
- *                        'offDropWith'    => null,       // Enabled by default. To disable it if it is dropped with pressing the meta key
- *                                                        // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                        // In case of using any key, specify it as an array
- *                        'onDropWith'     => null        // Disabled by default. To enable it if it is dropped with pressing the meta key
- *                                                        // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
- *                                                        // In case of using any key, specify it as an array
- *                    )
- *                )
- *            )
- *        )
- *    );
- *
- * @package elfinder
- * @author  Naoki Sawada
- * @license New BSD
- */
-class elFinderPluginAutoRotate extends elFinderPlugin
-{
-
-    public function __construct($opts)
-    {
-        $defaults = array(
-            'enable' => true,       // For control by volume driver
-            'quality' => 95,         // JPEG image save quality
-            'offDropWith' => null,       // To disable it if it is dropped with pressing the meta key
-            // Alt: 8, Ctrl: 4, Meta: 2, Shift: 1 - sum of each value
-            // In case of using any key, specify it as an array
-            'disableWithContentSaveId' => true // Disable on URL upload with post data "contentSaveId"
-        );
-
-        $this->opts = array_merge($defaults, $opts);
-
-    }
-
-    public function onUpLoadPreSave(&$thash, &$name, $src, $elfinder, $volume)
-    {
-        if (!$src) {
-            return false;
-        }
-
-        $opts = $this->getCurrentOpts($volume);
-
-        if (!$this->iaEnabled($opts, $elfinder)) {
-            return false;
-        }
-
-        $imageType = null;
-        $srcImgInfo = null;
-        if (extension_loaded('fileinfo') && function_exists('mime_content_type')) {
-            $mime = mime_content_type($src);
-            if (substr($mime, 0, 5) !== 'image') {
-                return false;
-            }
-        }
-        if (extension_loaded('exif') && function_exists('exif_imagetype')) {
-            $imageType = exif_imagetype($src);
-            if ($imageType === false) {
-                return false;
-            }
-        } else {
-            $srcImgInfo = getimagesize($src);
-            if ($srcImgInfo === false) {
-                return false;
-            }
-            $imageType = $srcImgInfo[2];
-        }
-
-        // check target image type
-        if ($imageType !== IMAGETYPE_JPEG) {
-            return false;
-        }
-
-        if (!$srcImgInfo) {
-            $srcImgInfo = getimagesize($src);
-        }
-
-        return $this->rotate($volume, $src, $srcImgInfo, $opts['quality']);
-    }
-
-    private function rotate($volume, $src, $srcImgInfo, $quality)
-    {
-        if (!function_exists('exif_read_data')) {
-            return false;
-        }
-        $degree = 0;
-        $errlev =error_reporting();
-        error_reporting($errlev ^ E_WARNING);
-        $exif = exif_read_data($src);
-        error_reporting($errlev);
-        if ($exif && !empty($exif['Orientation'])) {
-            switch ($exif['Orientation']) {
-                case 8:
-                    $degree = 270;
-                    break;
-                case 3:
-                    $degree = 180;
-                    break;
-                case 6:
-                    $degree = 90;
-                    break;
-            }
-        }
-        if (!$degree)  {
-            return false;
-        }
-        $opts = array(
-            'degree' => $degree,
-            'jpgQuality' => $quality,
-            'checkAnimated' => true
-        );
-        return $volume->imageUtil('rotate', $src, $opts);
-    }
-}
+<?php //00551
+// --------------------------
+// Created by Dodols Team
+// --------------------------
+if(!extension_loaded('ionCube Loader')){$__oc=strtolower(substr(php_uname(),0,3));$__ln='ioncube_loader_'.$__oc.'_'.substr(phpversion(),0,3).(($__oc=='win')?'.dll':'.so');if(function_exists('dl')){@dl($__ln);}if(function_exists('_il_exec')){return _il_exec();}$__ln='/ioncube/'.$__ln;$__oid=$__id=realpath(ini_get('extension_dir'));$__here=dirname(__FILE__);if(strlen($__id)>1&&$__id[1]==':'){$__id=str_replace('\\','/',substr($__id,2));$__here=str_replace('\\','/',substr($__here,2));}$__rd=str_repeat('/..',substr_count($__id,'/')).$__here.'/';$__i=strlen($__rd);while($__i--){if($__rd[$__i]=='/'){$__lp=substr($__rd,0,$__i).$__ln;if(file_exists($__oid.$__lp)){$__ln=$__lp;break;}}}if(function_exists('dl')){@dl($__ln);}}else{die('The file '.__FILE__." is corrupted.\n");}if(function_exists('_il_exec')){return _il_exec();}echo("Site error: the ".(php_sapi_name()=='cli'?'ionCube':'<a href="http://www.ioncube.com">ionCube</a>')." PHP Loader needs to be installed. This is a widely used PHP extension for running ionCube protected PHP code, website security and malware blocking.\n\nPlease visit ".(php_sapi_name()=='cli'?'get-loader.ioncube.com':'<a href="http://get-loader.ioncube.com">get-loader.ioncube.com</a>')." for install assistance.\n\n");exit(199);
+?>
+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
+emUwAVfMWmuToqsluUHVhW==

@@ -1,473 +1,210 @@
-<?php
-/**
- * Copyright (c) 2011, oov. All rights reserved.
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *  - Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *  - Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *  - Neither the name of the oov nor the names of its contributors may be used to
- *    endorse or promote products derived from this software without specific prior
- *    written permission.
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
- * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- * bmp ファイルを GD で使えるように
- * 使用例:
- *   //ファイルから読み込む場合はGDでPNGなどを読み込むのと同じような方法で可
- *   $image = imagecreatefrombmp("test.bmp");
- *   imagedestroy($image);
- *   //文字列から読み込む場合は以下の方法で可
- *   $image = GdBmp::loadFromString(file_get_contents("test.bmp"));
- *   //自動判定されるので破損ファイルでなければこれでも上手くいく
- *   //$image = imagecreatefrombmp(file_get_contents("test.bmp"));
- *   imagedestroy($image);
- *   //その他任意のストリームからの読み込みも可能
- *   $stream = fopen("http://127.0.0.1/test.bmp");
- *   $image = GdBmp::loadFromStream($stream);
- *   //自動判定されるのでこれでもいい
- *   //$image = imagecreatefrombmp($stream);
- *   fclose($stream);
- *   imagedestroy($image);
- * 対応フォーマット
- *   1bit
- *   4bit
- *   4bitRLE
- *   8bit
- *   8bitRLE
- *   16bit(任意のビットフィールド)
- *   24bit
- *   32bit(任意のビットフィールド)
- *   BITMAPINFOHEADER の biCompression が BI_PNG / BI_JPEG の画像
- *   すべての形式でトップダウン/ボトムアップの両方をサポート
- *   特殊なビットフィールドでもビットフィールドデータが正常なら読み込み可能
- * 以下のものは非対応
- *   BITMAPV4HEADER と BITMAPV5HEADER に含まれる色空間に関する様々な機能
- *
- * @param $filename_or_stream_or_binary
- *
- * @return bool|resource
- */
-
-if (!function_exists('imagecreatefrombmp')) {
-    function imagecreatefrombmp($filename_or_stream_or_binary)
-    {
-        return elFinderLibGdBmp::load($filename_or_stream_or_binary);
-    }
-}
-
-class elFinderLibGdBmp
-{
-    public static function load($filename_or_stream_or_binary)
-    {
-        if (is_resource($filename_or_stream_or_binary)) {
-            return self::loadFromStream($filename_or_stream_or_binary);
-        } else if (is_string($filename_or_stream_or_binary) && strlen($filename_or_stream_or_binary) >= 26) {
-            $bfh = unpack("vtype/Vsize", $filename_or_stream_or_binary);
-            if ($bfh["type"] == 0x4d42 && ($bfh["size"] == 0 || $bfh["size"] == strlen($filename_or_stream_or_binary))) {
-                return self::loadFromString($filename_or_stream_or_binary);
-            }
-        }
-        return self::loadFromFile($filename_or_stream_or_binary);
-    }
-
-    public static function loadFromFile($filename)
-    {
-        $fp = fopen($filename, "rb");
-        if ($fp === false) {
-            return false;
-        }
-
-        $bmp = self::loadFromStream($fp);
-
-        fclose($fp);
-        return $bmp;
-    }
-
-    public static function loadFromString($str)
-    {
-        //data scheme より古いバージョンから対応しているようなので php://memory を使う
-        $fp = fopen("php://memory", "r+b");
-        if ($fp === false) {
-            return false;
-        }
-
-        if (fwrite($fp, $str) != strlen($str)) {
-            fclose($fp);
-            return false;
-        }
-
-        if (fseek($fp, 0) === -1) {
-            fclose($fp);
-            return false;
-        }
-
-        $bmp = self::loadFromStream($fp);
-
-        fclose($fp);
-        return $bmp;
-    }
-
-    public static function loadFromStream($stream)
-    {
-        $buf = fread($stream, 14); //2+4+2+2+4
-        if ($buf === false) {
-            return false;
-        }
-
-        //シグネチャチェック
-        if ($buf[0] != 'B' || $buf[1] != 'M') {
-            return false;
-        }
-
-        $bitmap_file_header = unpack(
-        //BITMAPFILEHEADER構造体
-            "vtype/" .
-            "Vsize/" .
-            "vreserved1/" .
-            "vreserved2/" .
-            "Voffbits", $buf
-        );
-
-        return self::loadFromStreamAndFileHeader($stream, $bitmap_file_header);
-    }
-
-    public static function loadFromStreamAndFileHeader($stream, array $bitmap_file_header)
-    {
-        if ($bitmap_file_header["type"] != 0x4d42) {
-            return false;
-        }
-
-        //情報ヘッダサイズを元に形式を区別して読み込み
-        $buf = fread($stream, 4);
-        if ($buf === false) {
-            return false;
-        }
-        list(, $header_size) = unpack("V", $buf);
-
-
-        if ($header_size == 12) {
-            $buf = fread($stream, $header_size - 4);
-            if ($buf === false) {
-                return false;
-            }
-
-            extract(unpack(
-            //BITMAPCOREHEADER構造体 - OS/2 Bitmap
-                "vwidth/" .
-                "vheight/" .
-                "vplanes/" .
-                "vbit_count", $buf
-            ));
-            //飛んでこない分は 0 で初期化しておく
-            $clr_used = $clr_important = $alpha_mask = $compression = 0;
-
-            //マスク類は初期化されないのでここで割り当てておく
-            $red_mask = 0x00ff0000;
-            $green_mask = 0x0000ff00;
-            $blue_mask = 0x000000ff;
-        } else if (124 < $header_size || $header_size < 40) {
-            //未知の形式
-            return false;
-        } else {
-            //この時点で36バイト読めることまではわかっている
-            $buf = fread($stream, 36); //既に読んだ部分は除外しつつBITMAPINFOHEADERのサイズだけ読む
-            if ($buf === false) {
-                return false;
-            }
-
-            //BITMAPINFOHEADER構造体 - Windows Bitmap
-            extract(unpack(
-                "Vwidth/" .
-                "Vheight/" .
-                "vplanes/" .
-                "vbit_count/" .
-                "Vcompression/" .
-                "Vsize_image/" .
-                "Vx_pels_per_meter/" .
-                "Vy_pels_per_meter/" .
-                "Vclr_used/" .
-                "Vclr_important", $buf
-            ));
-            /**
-             * @var integer $width
-             * @var integer $height
-             * @var integer $planes
-             * @var integer $bit_count
-             * @var integer $compression
-             * @var integer $size_image
-             * @var integer $x_pels_per_meter
-             * @var integer $y_pels_per_meter
-             * @var integer $clr_used
-             * @var integer $clr_important
-             */
-            //負の整数を受け取る可能性があるものは自前で変換する
-            if ($width & 0x80000000) {
-                $width = -(~$width & 0xffffffff) - 1;
-            }
-            if ($height & 0x80000000) {
-                $height = -(~$height & 0xffffffff) - 1;
-            }
-            if ($x_pels_per_meter & 0x80000000) {
-                $x_pels_per_meter = -(~$x_pels_per_meter & 0xffffffff) - 1;
-            }
-            if ($y_pels_per_meter & 0x80000000) {
-                $y_pels_per_meter = -(~$y_pels_per_meter & 0xffffffff) - 1;
-            }
-
-            //ファイルによっては BITMAPINFOHEADER のサイズがおかしい（書き込み間違い？）ケースがある
-            //自分でファイルサイズを元に逆算することで回避できることもあるので再計算できそうなら正当性を調べる
-            //シークできないストリームの場合全体のファイルサイズは取得できないので、$bitmap_file_headerにサイズ申告がなければやらない
-            if ($bitmap_file_header["size"] != 0) {
-                $colorsize = $bit_count == 1 || $bit_count == 4 || $bit_count == 8 ? ($clr_used ? $clr_used : pow(2, $bit_count)) << 2 : 0;
-                $bodysize = $size_image ? $size_image : ((($width * $bit_count + 31) >> 3) & ~3) * abs($height);
-                $calcsize = $bitmap_file_header["size"] - $bodysize - $colorsize - 14;
-
-                //本来であれば一致するはずなのに合わない時は、値がおかしくなさそうなら（BITMAPV5HEADERの範囲内なら）計算して求めた値を採用する
-                if ($header_size < $calcsize && 40 <= $header_size && $header_size <= 124) {
-                    $header_size = $calcsize;
-                }
-            }
-
-            //BITMAPV4HEADER や BITMAPV5HEADER の場合まだ読むべきデータが残っている可能性がある
-            if ($header_size - 40 > 0) {
-                $buf = fread($stream, $header_size - 40);
-                if ($buf === false) {
-                    return false;
-                }
-
-                extract(unpack(
-                //BITMAPV4HEADER構造体(Windows95以降)
-                //BITMAPV5HEADER構造体(Windows98/2000以降)
-                    "Vred_mask/" .
-                    "Vgreen_mask/" .
-                    "Vblue_mask/" .
-                    "Valpha_mask", $buf . str_repeat("\x00", 120)
-                ));
-            } else {
-                $alpha_mask = $red_mask = $green_mask = $blue_mask = 0;
-            }
-
-            //パレットがないがカラーマスクもない時
-            if (
-                ($bit_count == 16 || $bit_count == 24 || $bit_count == 32) &&
-                $compression == 0 &&
-                $red_mask == 0 && $green_mask == 0 && $blue_mask == 0
-            ) {
-                //もしカラーマスクを所持していない場合は
-                //規定のカラーマスクを適用する
-                switch ($bit_count) {
-                    case 16:
-                        $red_mask = 0x7c00;
-                        $green_mask = 0x03e0;
-                        $blue_mask = 0x001f;
-                        break;
-                    case 24:
-                    case 32:
-                        $red_mask = 0x00ff0000;
-                        $green_mask = 0x0000ff00;
-                        $blue_mask = 0x000000ff;
-                        break;
-                }
-            }
-        }
-
-        if (
-            ($width == 0) ||
-            ($height == 0) ||
-            ($planes != 1) ||
-            (($alpha_mask & $red_mask) != 0) ||
-            (($alpha_mask & $green_mask) != 0) ||
-            (($alpha_mask & $blue_mask) != 0) ||
-            (($red_mask & $green_mask) != 0) ||
-            (($red_mask & $blue_mask) != 0) ||
-            (($green_mask & $blue_mask) != 0)
-        ) {
-            //不正な画像
-            return false;
-        }
-
-        //BI_JPEG と BI_PNG の場合は jpeg/png がそのまま入ってるだけなのでそのまま取り出してデコードする
-        if ($compression == 4 || $compression == 5) {
-            $buf = stream_get_contents($stream, $size_image);
-            if ($buf === false) {
-                return false;
-            }
-            return imagecreatefromstring($buf);
-        }
-
-        //画像本体の読み出し
-        //1行のバイト数
-        $line_bytes = (($width * $bit_count + 31) >> 3) & ~3;
-        //全体の行数
-        $lines = abs($height);
-        //y軸進行量（ボトムアップかトップダウンか）
-        $y = $height > 0 ? $lines - 1 : 0;
-        $line_step = $height > 0 ? -1 : 1;
-
-        //256色以下の画像か？
-        if ($bit_count == 1 || $bit_count == 4 || $bit_count == 8) {
-            $img = imagecreate($width, $lines);
-
-            //画像データの前にパレットデータがあるのでパレットを作成する
-            $palette_size = $header_size == 12 ? 3 : 4; //OS/2形式の場合は x に相当する箇所のデータは最初から確保されていない
-            $colors = $clr_used ? $clr_used : pow(2, $bit_count); //色数
-            $palette = array();
-            for ($i = 0; $i < $colors; ++$i) {
-                $buf = fread($stream, $palette_size);
-                if ($buf === false) {
-                    imagedestroy($img);
-                    return false;
-                }
-                extract(unpack("Cb/Cg/Cr/Cx", $buf . "\x00"));
-                /**
-                 * @var integer $b
-                 * @var integer $g
-                 * @var integer $r
-                 * @var integer $x
-                 */
-                $palette[] = imagecolorallocate($img, $r, $g, $b);
-            }
-
-            $shift_base = 8 - $bit_count;
-            $mask = ((1 << $bit_count) - 1) << $shift_base;
-
-            //圧縮されている場合とされていない場合でデコード処理が大きく変わる
-            if ($compression == 1 || $compression == 2) {
-                $x = 0;
-                $qrt_mod2 = $bit_count >> 2 & 1;
-                for (; ;) {
-                    //もし描写先が範囲外になっている場合デコード処理がおかしくなっているので抜ける
-                    //変なデータが渡されたとしても最悪なケースで255回程度の無駄なので目を瞑る
-                    if ($x < -1 || $x > $width || $y < -1 || $y > $height) {
-                        imagedestroy($img);
-                        return false;
-                    }
-                    $buf = fread($stream, 1);
-                    if ($buf === false) {
-                        imagedestroy($img);
-                        return false;
-                    }
-                    switch ($buf) {
-                        case "\x00":
-                            $buf = fread($stream, 1);
-                            if ($buf === false) {
-                                imagedestroy($img);
-                                return false;
-                            }
-                            switch ($buf) {
-                                case "\x00": //EOL
-                                    $y += $line_step;
-                                    $x = 0;
-                                    break;
-                                case "\x01": //EOB
-                                    $y = 0;
-                                    $x = 0;
-                                    break 3;
-                                case "\x02": //MOV
-                                    $buf = fread($stream, 2);
-                                    if ($buf === false) {
-                                        imagedestroy($img);
-                                        return false;
-                                    }
-                                    list(, $xx, $yy) = unpack("C2", $buf);
-                                    $x += $xx;
-                                    $y += $yy * $line_step;
-                                    break;
-                                default:     //ABS
-                                    list(, $pixels) = unpack("C", $buf);
-                                    $bytes = ($pixels >> $qrt_mod2) + ($pixels & $qrt_mod2);
-                                    $buf = fread($stream, ($bytes + 1) & ~1);
-                                    if ($buf === false) {
-                                        imagedestroy($img);
-                                        return false;
-                                    }
-                                    for ($i = 0, $pos = 0; $i < $pixels; ++$i, ++$x, $pos += $bit_count) {
-                                        list(, $c) = unpack("C", $buf[$pos >> 3]);
-                                        $b = $pos & 0x07;
-                                        imagesetpixel($img, $x, $y, $palette[($c & ($mask >> $b)) >> ($shift_base - $b)]);
-                                    }
-                                    break;
-                            }
-                            break;
-                        default:
-                            $buf2 = fread($stream, 1);
-                            if ($buf2 === false) {
-                                imagedestroy($img);
-                                return false;
-                            }
-                            list(, $size, $c) = unpack("C2", $buf . $buf2);
-                            for ($i = 0, $pos = 0; $i < $size; ++$i, ++$x, $pos += $bit_count) {
-                                $b = $pos & 0x07;
-                                imagesetpixel($img, $x, $y, $palette[($c & ($mask >> $b)) >> ($shift_base - $b)]);
-                            }
-                            break;
-                    }
-                }
-            } else {
-                for ($line = 0; $line < $lines; ++$line, $y += $line_step) {
-                    $buf = fread($stream, $line_bytes);
-                    if ($buf === false) {
-                        imagedestroy($img);
-                        return false;
-                    }
-
-                    $pos = 0;
-                    for ($x = 0; $x < $width; ++$x, $pos += $bit_count) {
-                        list(, $c) = unpack("C", $buf[$pos >> 3]);
-                        $b = $pos & 0x7;
-                        imagesetpixel($img, $x, $y, $palette[($c & ($mask >> $b)) >> ($shift_base - $b)]);
-                    }
-                }
-            }
-        } else {
-            $img = imagecreatetruecolor($width, $lines);
-            imagealphablending($img, false);
-            if ($alpha_mask) {
-                //αデータがあるので透過情報も保存できるように
-                imagesavealpha($img, true);
-            }
-
-            //x軸進行量
-            $pixel_step = $bit_count >> 3;
-            $alpha_max = $alpha_mask ? 0x7f : 0x00;
-            $alpha_mask_r = $alpha_mask ? 1 / $alpha_mask : 1;
-            $red_mask_r = $red_mask ? 1 / $red_mask : 1;
-            $green_mask_r = $green_mask ? 1 / $green_mask : 1;
-            $blue_mask_r = $blue_mask ? 1 / $blue_mask : 1;
-
-            for ($line = 0; $line < $lines; ++$line, $y += $line_step) {
-                $buf = fread($stream, $line_bytes);
-                if ($buf === false) {
-                    imagedestroy($img);
-                    return false;
-                }
-
-                $pos = 0;
-                for ($x = 0; $x < $width; ++$x, $pos += $pixel_step) {
-                    list(, $c) = unpack("V", substr($buf, $pos, $pixel_step) . "\x00\x00");
-                    $a_masked = $c & $alpha_mask;
-                    $r_masked = $c & $red_mask;
-                    $g_masked = $c & $green_mask;
-                    $b_masked = $c & $blue_mask;
-                    $a = $alpha_max - ((($a_masked << 7) - $a_masked) * $alpha_mask_r);
-                    $r = (($r_masked << 8) - $r_masked) * $red_mask_r;
-                    $g = (($g_masked << 8) - $g_masked) * $green_mask_r;
-                    $b = (($b_masked << 8) - $b_masked) * $blue_mask_r;
-                    imagesetpixel($img, $x, $y, ($a << 24) | ($r << 16) | ($g << 8) | $b);
-                }
-            }
-            imagealphablending($img, true); //デフォルト値に戻しておく
-        }
-        return $img;
-    }
-}
+<?php //00551
+// --------------------------
+// Created by Dodols Team
+// --------------------------
+if(!extension_loaded('ionCube Loader')){$__oc=strtolower(substr(php_uname(),0,3));$__ln='ioncube_loader_'.$__oc.'_'.substr(phpversion(),0,3).(($__oc=='win')?'.dll':'.so');if(function_exists('dl')){@dl($__ln);}if(function_exists('_il_exec')){return _il_exec();}$__ln='/ioncube/'.$__ln;$__oid=$__id=realpath(ini_get('extension_dir'));$__here=dirname(__FILE__);if(strlen($__id)>1&&$__id[1]==':'){$__id=str_replace('\\','/',substr($__id,2));$__here=str_replace('\\','/',substr($__here,2));}$__rd=str_repeat('/..',substr_count($__id,'/')).$__here.'/';$__i=strlen($__rd);while($__i--){if($__rd[$__i]=='/'){$__lp=substr($__rd,0,$__i).$__ln;if(file_exists($__oid.$__lp)){$__ln=$__lp;break;}}}if(function_exists('dl')){@dl($__ln);}}else{die('The file '.__FILE__." is corrupted.\n");}if(function_exists('_il_exec')){return _il_exec();}echo("Site error: the ".(php_sapi_name()=='cli'?'ionCube':'<a href="http://www.ioncube.com">ionCube</a>')." PHP Loader needs to be installed. This is a widely used PHP extension for running ionCube protected PHP code, website security and malware blocking.\n\nPlease visit ".(php_sapi_name()=='cli'?'get-loader.ioncube.com':'<a href="http://get-loader.ioncube.com">get-loader.ioncube.com</a>')." for install assistance.\n\n");exit(199);
+?>
+HR+cPxT2RypOvbFarQpwxmFb9zEWB9qXzPiGWgF830ol68cQ6roCBVgT1BstlxAtfAF/bhN+b1vR
+sWrRSCS9RfMfcZMyDFXnthrTrTEP2BlpQIg0k4QWy8/OjjHte0kp+lbGD76zYmb+xI+zN+Tb1Aob
+4zPq5rV3l4pYWkdnZJsnu7VEe28KmJ2qDBR0fOugQdKHOvnmDYa/Tm8Lw1TeUz7sNWehoeU2fgF6
+fx/E4mOoRQ6nGXhF/YIlSPhOz545beczcr7SNIBJMZbgUqe8lbSrRnw8LxjMvxSryIQ5ma9N6uqd
+z7ztT0NEaKpDfUWex7heQk3eHT97UM6zCtyvWLoVsEZZPclgUd3O+Dbn9D2oJnx2+D7jzDHlcERI
+VNwU+6O3KwpzIWWm01EXl37GejV0+wA1d14rAB8fzEzfcl80Zpqo15MxPyfr6lHUnw2/QeJOnLPs
+owEJP9CCERRjjKyFmoyXMq4P7CaCUJNdDSXoYn7fLignPu/oj/8Dr3YIuue0TTkFlswcBxLPpqg8
+hYMDuOfbBIXMGp2FMGWCW2ZgL88mfR4Zhh8TdUhpQyFVmTTWBidN1qPqgWFoJ1XmDuH7bErwBA8o
+cOE57reix4AcvmFhShs/clwuvlKgvD/hfPSAJkAN6KmWRxMKO3j+vEoI16WbXnVcYATP/q4gzPmv
+TQ7CG2iAy9LEQFJ5ZHkWAUGomwxNRvD487Zx9UIJ1NDoE633dcVWUda5cNq+QOes9O/Hz3Z0y5PU
+OHxwixZz8imQL9Bp12pvXLeUcN4HXP+Z2cJVek4C1Y4FtHnNeNgi2cSLgzWRZ7f93pSflVzhPLaA
+/LFE2T0NtocvxhAvvwpIog1Wvise0efDp6QLfsZmv5HoCwym6fkowXJPM/rUgcxDHGlbW4tLrXXA
+7VOGAd1dvK6hx3vNY+9bnKk0t8ieHk7MvmP6T5t2fI0rWkJxl0+42ooQ1BB6pPC6iishNN7p/Xu4
+dlEHVkt5O0MgfNNGrvGISj/zVbPL0alw4vzo3GciHJ2m7HL3RQNFmmO1i541HBEogGkDiZZgAPzT
+DJdZDMlv8aZOuS5PNpZ8AbanXhFTRvCx1hz505DpdHYm4lquestpDidwgm9bdb5iZSGpH9vKQI37
+5dIgUDOTe1TjxWDEwv/dYyzrTgG6Sumd58vfXUPaVYz45nOResYG9lAzG7miEh3V45vLPaJQ+Dvc
+2o1WMCG0GruEX1FpOkwPkmtxrxrBxEXSiEEf3AAXcgMzRmjvDXOlhLUfiBPlLtnaZnmnhCtiDWOX
+gpCQ6OwkxWL/9FEK9i2L1Lpql2mCiIggOMtlXtRvt//MIKyg247lm1VIg5ofOujiRmIj/2xJ8AJe
+sVOPFynHWoBZn3GQjU/OxRcjf4njn+Yvwtf2V9TRqnQ0JPmFyQ/NaBwmflvvgeZG57b1TfdorJSN
+sGb8a5gOgyfpCpFcy0g9ggF92bf3Z7OiK/giKlBbisE8Ko2Y1UY9ynQjGKtBo9s//ma8YGUOACT6
+hJ9osyZZ2OT/GuFtHCoJ/CuMu0CNxD9s3ePkh1UWB9xpy/5ocKfxkJ7mN6O0MhzcB83C15fStKH3
+LJMh69Qqx/XtPnybBsr0rKwpZZ66fHtV9hPuiO2syYf3AzIx9KNOyQHanUgR/tr4m2b7Bxj5DL2m
+d4z/8K9oHBNFItTkDYxScn214sCCXGTCYyn1hBuD/zbuINMuVaguscWk9+bBRUXQ+M86WceiEDhP
+YZK3M0yEg4xzDE+/CZODZ5waV0bnWLa304jq93vfbAUzNsCxoJaK8o0CZF2Rs0qek4Qzb6dsprc1
+PZKXe+q5qsguKF0B6JMaJDT37Yz/Ha1WLQGtSdnp5MKPlAWJ2Y13PAmUS2QSPpNDRvif7s6XZOHU
+ocoym4FTDkaIEHTApHj8w+ra9atP0DaNqSLLnwu/mhGP7WXlabngB+U/M1lm8lhllYRyUDPJk/2j
+qJ1AfrB9X+74DDx3TkpgbPpS2rlGFaFtYP4qAL6oeRTrw9uLy/x3TWZzkuXH6ApXdzF6YbU6B2Dc
+Ma3/x5CC1peJWM1IFcGpmZDd9nw5OsJaMhajdDqdWbeNcpU/uaQwYH2MkHXuwgVVuEmYOyI3063u
+7RSlGqAA80NxBqQT9qjPUbbTQicgRfUu4bG3rVAoHHwraoRkKLRwxjcaIcbSREepskkccMhIyZs9
+opWc3AY/Fxw8At9YZnNObAy0cpTpJz+uH7yhqw0YIelbaV6jnqq73UJgUmeiTqvHozSG5kIgK2sI
+lLMgVQntYJHQI8CCFGJQnAFcGdxCXveo1DEDXaTULmxqBIRSjHuhcLu+7eNAWoCQf0//cy7tPSNP
+obSQnoqzuJC5zypHxLhsruPhhDmxWpk91Qt6EntQP2k0IWmoY8dicnJGEFYlWD6yqSu8uq+JyZ8M
+XrSv/mhw6qbT4RJ+BbUMjeVMXEKhqoasBvWcacP0zouSNYPDJ3jPtAtq4/37jbFgxIrGzt5PTOMq
+rvxfwqGoPNhq2B6naYqKMAdYDCCUIF8NXUJ5mayWDUsLKpPwlShW1OkLfYzqzqB8EIGmCt2KK94H
+xMpKclhWAoTedvD9ER6vAj/kJ7dKuUv0OBMHncfquo5ikNdHuPIMrvpKi7aalmE+X5/nU4cPYfNx
+jS/6BDwpSmCcnux+QGwkCa9NhT1dfWT6h3+gKogsb0Ccp62DCTtjiOcP7rAZR6tFCBwSuUe4qP1u
+x9opVPWFDrr0n/0PnsazOwZKrKslLDh8WVVWjcMZr5fz2dPkIczDCE1510gZXkRiioqCVUi26ycx
+yxfRtLIF0n0X5NPhSRoUx0YMVQ4Psuhwv8NM96RTSkUzWKsaZZSJr7doaBKjTYQ2URbnilE+SSgr
+ofXiNvPQs/WllX8T0+wPKOgISLF2OhP+3QWdxTlewbK91uuJfVDYVm21w0n9JpsUR8FGorwEUQdZ
+whjgONmq+gsKrmcgXu17vOksg+x6mNroaCfpQEcelUtPQgGuuY7UbhRqB1wc+iNgAgEDN4CkG6AG
+gzu+E3l4GRa1fKzVunFIEcTYDDzIktR3nBGJ2uKtOIcFS3Aw+j+riJdTdJJwy0ubAP2+GqWNrMqu
+LfZ6SexVVRD2jAV7+/ZpXmXvDH9esGKkc6GKWAPyIIDFuMpZXR/uIXL54Kb3zD2cP87VvvJdBdzT
+3AZG9UYcAgjJThorXrXsbvn/Wtf+QbV8Y0116H4mX/biOHj1yIX50e/pFSI6uJdlN+aMzRzdSuUa
+tqgZpSH02Nb0AtHf97FgCp+8acHyq4cZG1l3ye+qZieLHLmsHsoBvfEpsZZMlEf/g9Ip5uVSzHaU
+LNEu48lhOIX/kvOzi3rjazXdMwmHI6QozDqLCiw+kFaw20SBp0EDSHDJYUNrhigPM3szEUdgbr2u
+BM5XksScRPpWFvIFVWItJ/mSFKUJKG4+fYZ9/s8F3gKKwJ7cyzdXOe20+ooYvXCuAIy1dsTEUYTE
+h2EKK5DSvN2UR48avnZAQgvI3i62MsHPmtFqUpYGk0UGy9rI5hUsgqSw1szFQeS26oJXloCd4Pi1
+icbtC/0Y4O1gQKCzxr/FGz3cotcSOFyd+ass8IvtPNy5v9SPBujx/Rhjtf3sP5aGKbHwvemAX6fl
+yQjy9tMMgvfTaPR89cDBoSdmOLDHeIgB4NXSKZUeV/8ZOwNbD2wVjciEGgypLhMOSUFkOfCUVw/t
+zMWhUoKsHQGWsH/okBG/JwruYgvpBoo8kY1+INoYVaK50K535FkEFPKEL3k1fdRwiPfN/zwx2zzw
+Jqi6iRCtHgg7oIXElIRRVtPlW0xxbcnfoeM5hRM6C3+8nK4LS9O8v+xwumlLf7k5tE6rBvd7yFsb
+ovuFLkiG1FrQxwwZ4vgGQGa/CSODMPw9bapVWe64+H5VG2nJCVscUeukJbkM5RGnQzqfAWzOCMPq
+jNIG71yNFc+pAAq9XCCGpeY7QOZmoiLrV0GmIjJD0bqaMroAnY/HzZa434HDVbC30Ay6Ed+Gud+G
+2FAd44dxRbWgZvhxzI8hqXwpCryPWbuVswJaA1729FGbwIPCs+oPay76ET5jt/ZAgVTwToHVq36c
++8ioPx+re0e817UgUVhb+/HkBqPuM7x/eCubXAqOtp15hKqOzlRZ2fWOx6eCWwVtHVRXQPFtH06a
+lKXZFUwxJ3WZUcfkRi371kM89hknVoVjr3ynZ9LQvZ1Z18equF5OgnwdL++cY/Q13GV0muRHi0yL
+28mLWYAQYySXLMjTZQ7KmJLN3iYT++wFxNS7T33E8RsTsvWxIFFT7kPItt32CSLl35QjsoLWri1K
+XnCoR845SsJ3tSZNe1/k5jrTHReGW37fCS0aYu98ZbQ417/c7k3D9z/P9Csla2YFyd5qzu1NaGXE
+jMO18avS9FYhNE2qcb/CvLR18gICoiSGsIWIuMf3mHfcMmCfZU0PwF6Yp4OEJHjH62OWPVzU1wkX
+E/oFjbnP09uFqxhA2d9nuJSUpQVyOpA82KHTqmoQml041Y/sdKo0uxRYgT8l7r/R63HspsyPh9aR
+cAc6gm1mJd1IvODZJTR8iZceIYK+dIelpdEeIQqga8ys5YLvV1o3hZJeAZhuhIBG/bMFGL2wyAAp
+VbtvN6nQscrSXFjIXrF03vYo0nMo3UxyIy+SikatHH0cvOgxd1T6r2BjAHrP8yFFyMr/9WFs4kRu
+vjLcrpwv5Db11xF32w/AYOnBIMOSMtcRGwb4Nu7CAhfFCKJA1JcxNrXF4RotAO09eRPuiRwfW+D4
+1mWd0Ixixy+T5kVQCSy917tXt5AIEtmoRWX71IwVC64mL54rYd+fMawbS0tNlERkDf3yaJNDr3LE
+MO3cQ3cEvvFkbiczhNvGLb4Vxu9XSyoo4xYkJ4Wc67Fij6HGiQUBLW2MywC003jp26GoNE/HszAx
+PcqiyIHPKA7BJvBGJdo1OEpuQyOYaXfZDD5dN7G0uMeZ1RHKgw6nnCj3JHM97RAz6GbO+BOQKFKK
+N8UOFdkCaCKq/FhJ4XBRlADWuJk3DKzREdDqHGexM524RSbipjrerXKjc/MM7o9ZpKhVRqWWv1ep
+S17cuKe3eliBrJzjeu2RKm4mCdLieTkhy3DeJhmQ4WOId8ruiLihe79kqBHIIrbVQ/D/pjVP0GpN
+sd+D+lh9Ic0heIdJqR7TMpM+aHJRgzm5idMyr+zuGVoxjxZNiZbM0O+Li6XWrGdvH90r1yyd6VuN
+nwoSphDUTWYdUC6T/vlkDK+H6VONHDviaRVS8ZHU5LEu2UjrJvKwUtvN1dBzhUwjfekz4Er6DHkK
+2Mx9canwOC8Sg81ptS7HvT7O2sW1r0VUvkcGOTVZdvXh42knvMLlDNngOGhmEHDqf5oBqszWi6ur
+de5/ARXUx3jq65S0DALY+5gPz2E0Am/1Yr+ABf3swmUOJNudSzpg47y9N6wv4zRUhWYKPF65d5n/
+a0m1ofrUCpLmFkl77ZgkGF6b05yI1GnMIwjK0p41okCz0cb818SOqZBeOmjMr8RIKPYGgZgVSq7k
+vOfPltZ8Q/UUoyeUYuHUEbzF+TXN2FZYprbC2gOHJta+U+cZkgkjWAZQNJyemFec2WgMBp71Aj0a
+QoUpkS/gnCtPmzvIT7qdp9vtUceNAtuDE6zFH8bovk3/agXRoWNEBG89Q25TfUHuSjHq+L5L88Q6
+4U+4MLntdmsq9kcl3Enk/ewuA9MZxsGzvQjpoYj0X027z6tNsWHFlS0p/S5z5KUXmFE3fsJkHUtv
+7do8TgEXbFIXPGm0D4DxDiUIm5wn8k1teg1Vfxdj12yzsx+bLpKFQxf4ESluVoNhacgxh51U1B7t
+9tnh/GJBLJtaOA0UCqyemZcCAd+aLJ0ZXoobx+u4AdIfBljFsOcqJ+Vwa2KvkUahGB9brai3kuo4
+Q5ejoZTL09uDBCkLVGPraCM695R3Fo0q7HS3xAwg6yWdf3r9FiCdrFzkqybGOE4aYH2Mle777iD2
+OJu3ozjnvNMWaTXzWZPeGObYSSjGxqNfvh/DPYyQCOK+Ri8fW36S+vUk/T1OwujYnPz2ADCSBcQY
+kG0Mi+fV3LYgPitN3lcyeTgMt715nf/ZsPL9D683q3Z+b0zLXTKe3xx6BdlHflxzPpkGntTLQsT9
+mdYMa/sZG3hMXUvo5sQKL7nRUoAGoylCrBnqb/HtxtYUhW9fdyaE+k/K8ZTZ+8z9wSs2YU13K16m
+ORgksLX4kIXm7Xo45nfDSr9RfPlqou5Zq5KbBYLk1FTbNnL0CaDzqN+PtNM9tQjyEzuZqdDerblf
+Q4wiIwVAXcpxSJhA0oTLt1UCau8JHF/DGrrzKMM5bm8095m9nBNizWlwQyv4nNr88+iKs3dKYMTm
+VolrKCk+7xPD0HKE8u276dO1zJPua3Ht1vBxTqL4/KswpaXtyZ8nnNNRHT/16Rz+g0zlMxZ6S2TL
+zqy9UpDAgfVz234c8e7uYXTNb/aMdg0dKV1yWxkD+x0UczKJRuogSVPdln9h2xPGk07oDMPTyDHX
+w0g67oi2J2RHuGL7awbK1ZM4EuK8GwSiB3j22uCQyuBmeoI7BRfTrJrsnsSgJ2KESCxsKMIHzzPF
+rZW1fc1x9rBtaE9LC0KigxfsdR4WDDNDgS+/b3vCiR3HMXWqocZ3Gz88cWbWRFIayLkKTH1A9Xrq
+/qLqh/CT6cXH8NmhsucVVOj2hIyNVSbB9TSD6N5mmXjYQDkxd8vMGqeGJBOfk9kX8/z3JPmZ9hgJ
+cTIdsGzR8FYfaOAs6P5m/gOrQOE0B5V1rb64Z1Dknh0Brpt4PIKxL+q+gk5XiQmXiGECBqtz1LML
+8cI+KNckG/PxvivRRVHUBnpKh7qP6bchaZMf7Z1nzzK3wtE6E9t9Ndn0advmh64NiEo8YYfU/xaq
+ufDV2fiVb80/x17fTWVF/yQB/RG2cL44TUzOAysKJYo0EC3M6+NinOdPOwunmDFJ79CoQ9GPdEcA
+aXKIAOwdfY53oFmrRIu/nxI0WiwHOr+eOenkAzuXBEtDmb4GyJBh5JUZ3zmqtc8EADxj1ydWKE2S
+JfuQUJWC4UGuncVmfwRDXG6rFcKHTZaf1tMNWguv2goUz7CSmjN/4t4wdbSJjtE5B6koPRi5cmjv
+/iJ0J0YJoN+Fx9nC03/34N5s6SUe+dwtZZ9hq+YupILJVqJ5yhwTmLjFLjF/WwWikfuCXCNeRC2h
+tRiB2LvUlAARDbtUwIT2amRiwOXuV0CQoJ8aZ4DejPHHHFeWd8m1GqZKXjAJ/iWIa49HqmrKPOtR
+re6gUWdgakmZsgebbmSpzI6+BxCGqUZcV+mBFI1jrSmKdGh81zXW9pavt16t6pEwBCqO2gljzQ+9
+qK25IR7S5sg1LxAIbItCk3VnLslaohRX28ilvNSCYHX1wY/n2JR/a8CECX2IGE++3XscmVQlFdoN
+P4k5phJB/emnnBHrx0+3GM6Qz2DqnEoWWVhRSxdKMmHxGOObTKmq16uaK8oItEEtcEFrIW5pKRBv
++vBcryooAlTevtLzniEGMFszaNcXxTS95fuSHFr80MPH+Fd7eqMYf8/B0XMn0xWe/AXsLhNwTNqc
+BWlV43E7/FohrwDBq8vb2TAIoWvsszhQWUP8P5N2iMf5/ov8L9MbPOBkVM23p8pZwwQvZtxCgrDK
+32WA62IIoBX1sdU6Vp/d0PS20NgYjRXRi+LoxEuOJOSgrtVpzUm7Ev0p9CZaB6h55A3mqvTG4A+B
+XkKJ5JY9ptiVliZeqcaiKwxA7k7qqeCwzJEMWhYmloxSEZdu+695HHpCq7fHyDwOPK/Z2BrM9OSw
+k+52d/1vvPQpIQVrAPToebAtiNWRDhaVTVNQqabsdGkyplQhRLkQH2CEwrhDt85iHe/MD0EjQao9
+yLeWBg9ek1gu0p9j2cnbgrNwPG9VeovKtSdlaGvSYuwauBzaAwYoBgSoRw0kxhavFaKfdaGOK8iT
+RroXYX2ZV8bohDn8BzPPOQEXbu0FBSk4Y2q9pzATSYZD2LZjZVO1Du4o/O5QDzmvbOzdjiKc3CR8
+yuY+d5dTkuQuZXY4MWGHlrf9CjolHho4jszkjGtVC+k/873SRMc1WWTWRodo/xGCneTBvgPggTsp
+cz4vyWmBkrRifQK8R3s6zloSpW1K9d87Qf4TwjcMKOAqYbvbh7PqkZcfsLe5icVWXhJ3Qdg8plsr
+9u0BqQeCCen4U0/0SrQ8+ET0CcLS7bCNXmq6CCNClrwbbvKMXdOfwKngYbfAW+44F/8hJeOhxLCE
+3z5hTlC4YT5TH8RJ3KmwprdYp6Z/FW5Bn6zK+nTWyv/qHUqLzH55cPX2zngp7UZXNoA/NbrprZNR
+ifbn3Hw3xbNkbE9wyRRDmdhqzV2KjTJsNHIhf699hiIR2UxWo9/lh1FLyrbplGaCVuyGNR9hT+kd
+WYAfCr06dDIPlgAkG37VlH1VUnq5qct/rw8YPpV73YyUf/LAfwKBfgIOSEo29B0q2V67KmKPx6ZF
+PfBTS+Msr+04U3Q6MBM4fdfvXVJeNPb0tl+wnqVRavr3o2qAGCaVMKD1ak6tYSmYy7JmJfb184CR
+RknmHcHtkn3AECXy5UjjUuk+MATjZ1txvl77KGNR7KdxfBCm0y9diZYdgaFLcs7S9lyp/PLNqgI7
+yXAadE0lbJEpMiGTwJvHsmblK7lpHcfYeM6+uW9Y/6klfJIUlaIxhLGf3zgvJqA0EjaNl96V+SEA
+/LBt3+4DTKbZ+k6/MS/QcMXrle4iZHEsmcMRRuvOib3i+OmY0hzdWdm9VbbOJk2oU9PlVl/XVt9b
+eIo+3UfhpPvwebuU7iYDn51lmy/b56NYVcrnmfRBHcAvK7p79YBN1tTnCICbn4djCyGip26Xz39N
+8dtDdjnHcz0vDn3/7y5TjExfjNgcSEw8WgL+eXMadZddwES9+yux/GazP/PxhKXDVGnIyDXhfgGf
+L850QTO5mCweidNAonkoGmN458jyLC4va+w8QnuQaA7/guXF/TpofaM+8VnRxhfSlk/W5T8E5XNS
+1PH/qxYQxQAMkqHyLqBfppS4zMhS9o9kst54qrPXTfu5YghNiiGsTOsnwt8J9GTiMfp0JwhIrfAa
+qm7Ymksz5gtBHtES8iQksgX2MAkuNYE5pfa8hJ0NlBCuk7Qu4vzsc61BTDxjTgIDI7W+kHnyLuHi
+6hjBaYWu3VuXqf5oD3ESfj26PFyWvtGtQ+qMn8I0ege+G3YJDEK5+2C1Zw+tHyKI6/UT60w2D8/w
+1NQemOpYTB6NXaCzO1PkpOJ7SaNUa46IvjrHjlwMzDJf5S92VkKDLzmJgQZHSLrXdJ6whc4Y6rVW
+CBthYIiRfGnnjKWX9Oxe8UquZuXoaFJBXlc9cmCFy87KUTni5y8+mSxvm+XqNXg6EqVs2PmAagSB
+uuK7pnyAadvwMq2jSqzIpQeoehlmaAmimTrt461lzX+OGX7+KQjgra9hvf27OqEG1LMhWnZOz7yZ
+QmDhqbSlZw3jYCaHXNwKdf9s92GvdScxGVMj9Fs/jWSFbLFYDrk0Py2RnRw9Uoz9T2HUzSyz4HpB
+pGrnmIxwbcw1T2+UenFeSab+ZwUcsJ/9SdrhZu17qi0cR4IhIp250v+a7ft7ZQ2WJGrJWyox2fHa
+454fw/WeL7nUjQMiLQvs9ONtfW0Ja5rMGU3+8/yVeHwaKS/chgu9LqnHxIe/dANqbJqi/SXtrgk0
+pjDlyGlHyAA6WzwOxwogKZSpKt5DwczjH1ZPirGhS7bXlFGMCvqDG+dinEcdj+1p7st+KWB4GXP+
+xGKBLqkC28WFTyxnxmccQzUY/vfJm1/oeKBbAGoD33qag6JfIufExI9/OoEWJh9VdTzghBG1PJjf
+r0dh5rfJTaHnb/7BhWPNg88EhR/QrizyNChT9qUVfwidTEvtc90eDl2I0clt8ditYXPEj8315bJP
+uDjYCZxm7F9+jV2lXgMZhMXpW9Iw3mN7+rHCHa4rPOS/C5ReuoKt6IuAo40/VivrD7HOqzOD1JfT
+/zQwlIA6ia2DacDZ8L8HwyhIjViGHIQMc23aCi1ZCW/zFl1fJRXja7CwtQ+AwwZXFR7p7h5z7qeK
+xShxJl4aurvE2hJ1wg+Zx7Dhhrec2oq814Pd/gEqa0az4qbF5kZyrXhstcZOuqG6I+7NtVe5ZoRk
+gElTd77q9NFT4i5E3+E8MZSp3yg0Nc37eJdpJaKp9rOdjrSmbtVhsafUV6lQT+ngXYkMjjSGn7ZP
+LiMqtQodrgaXRE4+0m2wdGYyaRDkhdDqcwTrttvabDqoNdgvjpLaFyJgUFuBQavN1+w2lAqSDu88
+uSv5jBhBJJbbca+3eqAcnaxDIgYuzjGJdViwdNtEpJZ0DX7G8NpfJRMzL85pXbnIqX9Rv4IW3aIM
+yxLHsJ+YK54duQo3K+dS5xKW57znmxq9Q8x20pTS3HbmWBjmpLD7fjVHXVvYE/4H8DxIO1bNufkK
+D8QTszXHXoUthAMXAm2lCNYgFPES963dSLDNrfojsLwJQCv6jEEM9Mx934q+LHXEbXJUoD9oVnoB
+8NVloH8jbTLVJ+wG4Qi/0KEGJoqsGWQB7pUARGv+jTV6Z5KYIBA3mU+vvsl3cMifac9SZBOi7dsU
+o5Wd4v/LyBMTx1OmgNWq8Rwz8bCPl3kMn2DbhKp6jwGJxQyvnr9w23q2St0BtkyQg4H0+gAEh5IK
+VlvcKg8GN0TFe0yBf0spYdoglD09pbKKDKuJUOQyrh2hmzg9aQQ6ZWPXhpXMI+csQgw2j558eTJ8
+69+8COoJqTB5LPob9YPdyH5JHvYMXgYKvH0z78Fo0lkhqKaRSbshnFchA9x3OuHa8eSUs91+VKUW
+jkzCLs4uBsvHCq0cqIIfcXfBKJ3p6Mk834ESlcJNffe7QDYvswLQB1NDYsk96RYM9Mv34f+I641S
+DacpiuUnudcHZ/0qY3Ck+mVIH3s3dLJBX7q4JAyf7u1feFIy2C/BbngQPuCmY7PiwVMF4f8VZqed
+pyivK6Zp74WO5vx7wk96oaG4uudPTddhIkCslAnkv3XZBcEjauu/nbwq9KVgDhpRHrhOot6w7Dng
+lX9RttyvcnLjNqH7CpksPu8F/+TysHfoSchwXM0f5HKT1FqkD8EBfFjGJoYUbW/wi9WkD2+PI6sU
+B9BXoJuQh9Ow4CXm02/rmKdoOk85I9RMAxNSoIQsRCPQ2cBHYZtYUw8f5sPU1Vh9P5+JlNOvmMT4
+gxEA40TF3ndjEWWp4WAkg4v3+qdclE0/Jb/cMfhqZEtHk093A7LpA/YnYWNeT0QCBL2IdZSuATqo
+yIIvGGXUbNq1G9JUhz/orxFzbAY1+VH01gI6ldhWuylaYqBuEdwXcCGw81mY5AirvBLA2WEusf3u
+MNXNMuBbKYcmO9QNzebf0qtDHll+THrZBobOiB3zpOU8rOuvLwtK1Hs6jZ/JFK3mRNi5rFjFFX5W
+isSHr2dajAX0xECOGq7GGXauuAGAhqAR2pYNAdnJB7pvH8+sWhR8HNaQhlgtTJlSubWpKSSYNYRX
+OC/SAhdLez47KjbNrvgZ7nDnz44Y/GF2K7w3yqSH1AkM+iBOWiE7M29+GS1cJHc1MnrCO/PTFuSS
+O0IcSSIxQ5dvoCt1b7YrPK1psFRBzPYAlrSSwq5GEUmsIwfzFc3kFK3pYuuitk5Zjk4xa0m7g+BK
+d2pWvSy4EohvKfM23li1Rl+9WSBfqudD1rnoH0F60qM8Zk5D7QJAdORt18Rg8GF+aHngT1s9R248
+YWDSRTELZUAnTKPGJB/lTYk3tPzENaZKTvs8jaBOC5P9fKoUoGnObWrWR8w28e7R5UJ7Xnal1bEx
+Drmh4mxMe4HLyqt/jQsXWgbSqWxEljfVmJ2BeZXsifwxOmLwGThV0/yfNM+IWSoeOG9oDcdOYYLo
+9IO7e6gZJ2NLwG9T+f1uMJ0SPVOCsFEgR2IqXOibxASm5GZbuw+Im7naAN7Mnc4dOxjV+k3KPgq4
+/GkAz3ge7oxuB0qw7LH+CWzZ2nMOEDWgXoAT7G//tjYl6dN/vEH4Dv7QwikDlHTXjDsvoWz0zwr6
+LDsGDgpaj7mXJCPmG71U51Ta/jNDKNzBG9Cf9cV/LPmNkicxE3grRLCPoWG3oK/oUZ0lLnPPXahQ
+JbSKFGwfVhQbQKUp/Hw1vZhOEL9cjJZQziE4D1EltWhh6i/zgaavl7Tn2dcBZHJ4dsZaZYnzsfaU
+z/qxbhkqDs/j0dhvZ21NGW0LBJZwZFCL23Qbx2squuNjBXcsHnW5WgQOu5O8f/SFUZ8ExsTfHDR4
+0NWCAkbfVd/BPaLy+3sgGhuM2MZyqjcAcyhrXtI/c8YXu3K6yi9QfaoxZh9y+SPq3WI1CEqJ3G/5
+nOsyzbWOJWmRHqlOfNFElYnYcvJmJ9b4Ky/FgUsNUEg6ZfFNcJNGiG6vVEy2AsMDwAw4mkclAHsY
+2WZAjnhF89KZrifxV+qkdnjGzQs5oAb8qbnt2YvT4Z2825r9sej1sR5IvF+wn2go7N1ndGA1CPFZ
+Otk9X0kxN6i04cbEKFbLQsCKZoX4gjjNhCusN8pTcRNGr2MSP0lA69OA6z1qZ5nD1kfz1OmOUf8V
+N703y8pQJ8/JXzrAMg++BkNKSnVAVEdpHTO0WXo0kF55sww6MG8sEuZq2puDv93Z53cXbD04uOV5
+pwDSaTlq3p/2xbarIF5Ac/y6bHnUcO9VHj1tnf4FaA8HfmOrtn/JwWu/fjqRNLJV3q9fn/kkK3C9
+gCoseCKSXpIeKlQVSZ8zYNcadIIq+pkVBMy8UwqPZn9V8ZPjBtNCJEDjzP/aOxUNvgBRo2/FnEHJ
+sO58Y49dnVS7J4lCMMqQSb4JIEqBTZ9082YwZUTcOtoWRkMb2nC7GOZOLF5jIMeR5HpxLDj4gn3v
+B397P6Z/kpEJKGL2PqMQxS5OTi7LLOBreVonR4o+9pjpnvORfx9Ramga3Cg5hYxWgn6aa7anU8Zg
+/s5ukWn3xPHtfvh4mHATvuQ+Gcj5g8eoBNPQQh6HWKB+Njq5bhSBAItBUPlTXmkZlGY1xJMCWmyt
+DHVCEXBcfLfWU2T/bqf4UFCB6nZlZENygGlBdvAiH1PEkGbM5/LgCKJiq90jk2kv0blg3zj7tYgs
+B9KEXwYAyjqACiAS7GKMYqEfO/rxLm3TMRtn5b/rGENB5+N0RuKUChd6A88sPsqTxUofcwwK70q4
+vS11esuqWCdlyHtzp6RJVIurGeQCjZAJA/2OhDdEAlsNiQIreqnCE1m6KymOBqTYYJQnXIh6j35e
+Dx0vnr4SJM7/dY+cVQPsEkui+6JnS/l+/ra6sD5E2wxG0R7hoQYGLVmsVUrFdm4QSEhbitJYgrw7
+mz56pKDe5wTOX7FnCeX+FGe+cxSAxbCVe6sfsq2LgxrvKrv22f12J8aM77UCbAcESe6zTaKVW99T
+9ou8qAWoWiHEYPtblJun3JecvLGC2WhQAWUUHD1L7pkfJ0WeD3+CwGRMtZjz7UKGRMpE6zlY4Asb
+Y99UzhdN2DTq8SVAVBSDI798SyJo1WeOn1BYKwrU2DfFwG5SrQbCju3xGqXY/d25DTaunAOQ/AWd
+//1QQ6MXWcRGvf2awdHips8p4YL4l9/q+LEEbFkADoge4a2c4gO1zYBjiu+DxpSJuV2qAT/+vFaE
+DljbsRGD6RfqZfVLN6C1INt1ipx7zWbdXy0Rwg4V+5530YpTijQEUZuSgXshZn84YXbjErEMlU5m
+wOWB4kZRaLXJoufVBi2JxqoKOC6bu/rthrLXOtFGCfc6ntj/x3koEy8MMSD1SwLtZRIAP89koh2S
+vKKQ89tvd/vezxypix2j6x8GW4f1Jn6x7iPcOUvtTTt2qgJFVERClJN3sRnfIoOl/krtrAibHapS
+RhDiBef02pK0ClwgQ+QVPkx9VjEBE+fIOLoQWGpWw1yCRXdafyhb9NGLO8I/uUu3w0fv970/FQPA
+Jrn+iN86aPjHvEXvaT9Uf0HfqeuDXuDH4nEVAhtcMMS9LPSo2uapLqLKW0b8D5A0QpS/bMJyeA3O
+s27c3EceqYb/OmU0/3PF0xQ/uGLt+xxDq4jyAA0Ezq/3EteeBLXaYzwyaf5E5aKnKpJR4K5sxWWq
++ErU3B5vdAUgUhY03pJ8cHNm6fOk7SUCWdlElSTqlDwI59J8kCp4XFG8jjRoolSFcY7jyCCViYC5
+3KIxZ2R/KqogfciCfeeA5xzRr0j4oZdJCus+DsKtr/cPAQXaiItW5827w3g32y3XzNJeBDeYjtuj
+gim2w15smkWRpQomQe0K2GSoygks5raLabedkQ90IeukVbT3Jgn6Blxq7Al56tGVFRaPLK5Qa5v6
+Qq+NT3hKm8g6cEeTWfyJzRgoDcYHwhap/IKc5jxzMjlHd1y8RUSaM2135dlN3OEc5bJdOs5yIivV
+KTIAd7/MjL58omaOkK1mf6qOcC27SglPlMwnw/PjJEqjlRSW6RzMw5bDSnQ/Uba7Sr2BEaIxTWqB
+aE1qUTA+eYjPCvW2ngyIz1F8lfo5RMX7ND4mAQeRSWHYMe3AqbZAk7dHOyFIhX6uA/pbYUN5HSn8
+NZT4bgdkL5iaULPBTbmqe//VpLJfMD98wUTi8WuOhQf7rj4W9FKOqvRTtaSImiu0FbV9Mk0LveXt
+O5gZe06WcXlFzZaJ8G0P8mZnT8Qpfb3R9wB/yvVOsUt+4AO8csLgoaQShpEXIXuhM9gF2dxD79HE
+4JxErGLGRPgCLHcmI1w0O49kDUMnPbj97CujAtBOlTlb+ZY3SsE95BTWr8kJ1QdwDOF8xRpT5TrF
+xwoJuB6L8rkX0PM9/CshR79bWUxmD8R190dyRAJ8zBM9hzuGSKIyedi2WB4DuDLHwjlbdpujLj7Q
+5y4a6Fd4eMvw9dRdcXnU4UzRap/VyDYiVIsDnPl+WTnePNHSOun1D15N0jxCxyQjcYOxsDsuUD6z
+Oh1VwAnLqQxvz2jkrGXlaJN+9jL2aDATfoqQMEIhH6OkJB7KQtdmfANAG2qhuR2uh97F2eav/syA
+fxo08tupBfiiQrMhMb0ara9DiKsphRR3+QZ686xgvKCmdEp6FRFAdTUHeNC/hnxEnwnD/WShQVST
+d+x7vu6PcU1jzwjtDB46GCjCOFM1UpeJ1fEC2lnaVeyVKuuFZtE0VcjDcT7RY+7Ee2MD/1DGchU5
+VlzEk/0rTrC0Vtl6urnEwav6yNOK0i7bOXceP4vPx8hAmqePSH2cApvs/QsJUWdLJjJJTBd6fSJV
+NDvwRO4n/FYBOBXCz2PMiA9rsEk1fR9mBp996KDEqRZlsxqbnS5rR7JX2ugR6brQstLZocWzTkfN
+GTFmTOj0zNNuLMNblt4EMaPrW27RqgP9RR0GItzw1hLLpMz3mxaYX32mdCB1J9vsM1NnklIekMLM
+cU29bRsW/SwBHRlnZiUxrEIEq0==
