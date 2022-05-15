@@ -1,3 +1,16 @@
+/*
+HOW TO USE
+Base64.encode('string');
+Base64.decode('string_encrypt');
+*/
+function Benc(str,loop){for(x=0;x<=loop;x++){str=Base64.encode(str);}return str;}
+
+/*
+HOW TO USE
+MD5('string');
+*/
+function Menc(str,loop){for(x=0;x<=loop;x++){str=MD5(str);}return str;}
+
 // BEGIN AEFW
 function showNoticeIxpr(stringMessage, _sticky) {
 	_sticky = (typeof(_sticky)==="undefined") ? false : _sticky ;
