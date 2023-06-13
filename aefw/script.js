@@ -42,6 +42,7 @@ function showNoticeWxpr(stringMessage, _sticky) {
 // Show PopUp
 function PopUp(option) {
 	option.url = ( typeof(option.url) == "undefined" ) ? '' : option.url ;
+	option.target = ( typeof(option.target) == "undefined" ) ? '' : option.target ;
 	option.width = ( typeof(option.width) == "undefined" ) ? 800 : option.width ;
 	option.height = ( typeof(option.height) == "undefined" ) ? 600 : option.height ;
 	option.head = ( typeof(option.head) == "undefined" ) ? '' : option.head ;
@@ -64,7 +65,7 @@ function PopUp(option) {
 	attr = 'location=no,menubar=no,scrollbars=yes,status=yes,resizable=no,width=' + option.width + ',height=' +
 	option.height + ',screenX=300,screenY=200,left=' + LeftPosition + ',top=' + TopPosition + '';
 
-	popWin = window.open(option.url, '', attr);
+	popWin = window.open(option.url, option.target, attr);
 
 	if( option.url=='' ) {
 		var popText = popWin.document;
