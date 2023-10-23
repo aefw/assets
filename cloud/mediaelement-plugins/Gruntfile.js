@@ -166,8 +166,18 @@ module.exports = function (grunt) {
 					{
 						cwd: 'src',
 						expand: true,
-						src: ['**/*.png', '**/*.svg', '**/*-i18n.js'],
+						src: ['**/*.png', '**/*.svg', '**/*-i18n.js', '!**/demo/**'],
 						dest: 'dist/'
+					}
+				]
+			},
+			demo: {
+				files: [
+					{
+						cwd: 'src/demo',
+						expand: true,
+						src: ['mejs-controls.svg'],
+						dest: 'demo/'
 					}
 				]
 			}

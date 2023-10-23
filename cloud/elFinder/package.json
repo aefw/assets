@@ -26,7 +26,7 @@
   "homepage": "http://studio-42.github.io/elFinder/",
   "devDependencies": {
     "csso": "^1.8.2",
-    "jake": "^8.0.19",
-    "uglify-js": "^2.6.4"
+    "jake": "~8.0.12",
+    "uglify-js": "~2.6.2"
   }
 }

@@ -37,7 +37,11 @@ $.jgrid.regional["it"] = {
 		nomorerecs : "Non ci sono altri record...",
 		scrollPullup: "Trascina verso l'alto per altri...",
 		scrollPulldown : "Trascina verso il basso per aggiornare...",
-		scrollRefresh : "Rilascia per aggiornare..."
+		scrollRefresh : "Rilascia per aggiornare...",
+		valT : "checked",
+		valF : "unchecked",
+		selectLine : "Select row",
+		selectAllLines : "Select all rows"
 	},
 	search : {
 		caption: "Cerca...",
@@ -50,7 +54,11 @@ $.jgrid.regional["it"] = {
 		addsubgrup : "Aggiungi Sottogruppo",
 		addrule : "Aggiungi Regola",
 		delgroup : "Cancella Sottogruppo",
-		delrule : "Cancella Regola"
+		delrule : "Cancella Regola",
+		Close : "Close",
+		Operand : "Operand : ",
+		Operation : "Oper : ",
+		filterFor : "filter for"
 	},
 	edit : {
 		addCaption: "Aggiungi Record",
@@ -179,7 +187,8 @@ $.jgrid.regional["it"] = {
 		searchTitle : "Cerca righe con i valori:",
 		freeze : "Blocca",
 		unfreeze : "Sblocca",
-		reorder : "Sposta per riordinare"
+		reorder : "Sposta per riordinare",
+		hovermenu: "Click for column quick actions"
 	}
 };
 }));

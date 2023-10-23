@@ -1,5 +1,3 @@
-'use strict';
-
 /*!
  * This is a `i18n` language object.
  *
@@ -13,15 +11,14 @@
  * @see core/i18n.js
  */
 (function (exports) {
+    'use strict';
+
 	if (exports.zh === undefined) {
 		exports.zh = {
 			'mejs.plural-form': 0,
 
 			// core/mediaelement.js
 			'mejs.download-file': '下載檔案',
-
-			// renderers/flash.js
-			'mejs.install-flash': '您正在使用未啟用或安裝Flash播放器的瀏覽器。請打開您的Flash Player插件,或從https://get.adobe.com/flashplayer/下載最新版本',
 
 			// features/fullscreen.js
 			'mejs.fullscreen': '全螢幕',

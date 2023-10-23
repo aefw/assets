@@ -1,5 +1,3 @@
-'use strict';
-
 /*!
  * This is a `i18n` language object.
  *
@@ -12,15 +10,14 @@
  * @see core/i18n.js
  */
 (function (exports) {
+    'use strict';
+
 	if (exports.ms === undefined) {
 		exports.ms = {
 			'mejs.plural-form': 0,
 
 			// core/mediaelement.js
 			'mejs.download-file': 'Muat Turun Fail',
-
-			// renderers/flash.js
-			'mejs.install-flash': 'Anda sedang menggunakan pelayar internet yang tidak mempunyai pemain Flash. Sila aktifkan pemalam pemain Flash anda atau muat turun versi terbaru dari https://get.adobe.com/flashplayer/',
 
 			// features/fullscreen.js
 			'mejs.fullscreen': 'Skrin penuh',

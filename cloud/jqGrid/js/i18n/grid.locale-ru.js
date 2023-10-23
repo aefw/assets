@@ -47,7 +47,11 @@ $.jgrid.regional["ru"] = {
 		nomorerecs : "Нет больше записей...",
 		scrollPullup: "Потяните, чтобы загрузить более...",
 		scrollPulldown : "Потяните вниз чтобы обновить...",
-		scrollRefresh : "Отпустите, чтобы обновить..."
+		scrollRefresh : "Отпустите, чтобы обновить...",
+		valT : "checked",
+		valF : "unchecked",
+		selectLine : "Select row",
+		selectAllLines : "Select all rows"
 	},
 	search : {
 		caption: "Поиск...",
@@ -60,7 +64,11 @@ $.jgrid.regional["ru"] = {
 		addsubgrup : "Добавить группу",
 		addrule : "Добавить правило",
 		delgroup : "Удалить группу",
-		delrule : "Удалить правило"
+		delrule : "Удалить правило",
+		Close : "Закрыть",
+		Operand : "Операнд : ",
+		Operation : "Опер. : ",
+		filterFor : "filter for"
 	},
 	edit : {
 		addCaption: "Добавить запись",
@@ -179,7 +187,8 @@ $.jgrid.regional["ru"] = {
 		searchTitle : "Строки со значениями",
 		freeze : "Закрепление",
 		unfreeze : "Отмена закрепление",
-		reorder : "Переместить в порядок"
+		reorder : "Переместить в порядок",
+		hovermenu: "Щелкните, чтобы перейти к быстрым действиям в столбце "
 	}
 };
 }));

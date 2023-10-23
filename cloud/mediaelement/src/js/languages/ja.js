@@ -1,5 +1,3 @@
-'use strict';
-
 /*!
  * This is a `i18n` language object.
  *
@@ -12,15 +10,14 @@
  * @see core/i18n.js
  */
 (function (exports) {
+    'use strict';
+
 	if (exports.ja === undefined) {
 		exports.ja = {
 			'mejs.plural-form': 0,
 
 			// core/mediaelement.js
 			'mejs.download-file': 'ファイルをダウンロードする',
-
-			// renderers/flash.js
-			'mejs.install-flash': 'Flash Playerが有効またはインストールされていないブラウザを使用しています。Flash Playerプラグインをオンにするか,https://get.adobe.com/flashplayer/から最新バージョンをダウンロードしてください。',
 
 			// features/fullscreen.js
 			'mejs.fullscreen': '全画面',

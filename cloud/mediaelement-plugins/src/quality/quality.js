@@ -34,8 +34,8 @@ Object.assign(mejs.MepDefaults, {
 	autoHLS: false,
 	/**
 	 * @type Function
-     */
-    qualityChangeCallback: null
+	 */
+	qualityChangeCallback: null
 });
 
 Object.assign(MediaElementPlayer.prototype, {
@@ -96,6 +96,7 @@ Object.assign(MediaElementPlayer.prototype, {
 		});
 
 		media.addEventListener('loadedmetadata', function () {
+			// eslint-disable-next-line
 			if (!!media.hlsPlayer) {
 				const levels = media.hlsPlayer.levels;
 				if (t.options.autoGenerate && levels.length > 1) {
@@ -107,6 +108,7 @@ Object.assign(MediaElementPlayer.prototype, {
 					t.options.autoHLS = true;
 					t.generateQualityButton(t, player, media, qualityMap, currentQuality);
 				}
+				// eslint-disable-next-line
 			} else if (!!media.dashPlayer) {
 				const bitrates = media.dashPlayer.getBitrateInfoListFor("video");
 				if (t.options.autoGenerate && bitrates.length > 1) {
@@ -148,16 +150,14 @@ Object.assign(MediaElementPlayer.prototype, {
 		currentQuality = defaultValue;
 
 		// Get initial quality
-
-		player.qualitiesButton = document.createElement('div');
-		player.qualitiesButton.className = `${t.options.classPrefix}button ${t.options.classPrefix}qualities-button`;
-		player.qualitiesButton.innerHTML = `<button type="button" aria-controls="${t.id}" title="${qualityTitle}" ` +
-			`aria-label="${qualityTitle}" tabindex="0">${defaultValue}</button>` +
+		const generateId = Math.floor(Math.random() * 100);
+		player.qualitiesContainer = document.createElement('div');
+		player.qualitiesContainer.className = `${t.options.classPrefix}button ${t.options.classPrefix}qualities-button`;
+		player.qualitiesContainer.innerHTML = `<button type="button" title="${qualityTitle}" aria-label="${qualityTitle}" aria-controls="qualitieslist-${generateId}" aria-expanded="false">${defaultValue}</button>` +
 			`<div class="${t.options.classPrefix}qualities-selector ${t.options.classPrefix}offscreen">` +
-			`<ul class="${t.options.classPrefix}qualities-selector-list"></ul>` +
-			`</div>`;
+			`<ul class="${t.options.classPrefix}qualities-selector-list" id="qualitieslist-${generateId}" tabindex="-1"></ul></div>`;
 
-		t.addControlElement(player.qualitiesButton, 'qualities');
+		t.addControlElement(player.qualitiesContainer, 'qualities');
 
 		qualityMap.forEach(function (value, key) {
 			if (key !== 'map_keys_1') {
@@ -166,41 +166,72 @@ Object.assign(MediaElementPlayer.prototype, {
 					quality = key,
 					inputId = `${t.id}-qualities-${quality}`
 				;
-				player.qualitiesButton.querySelector('ul').innerHTML += `<li class="${t.options.classPrefix}qualities-selector-list-item">` +
-					`<input class="${t.options.classPrefix}qualities-selector-input" type="radio" name="${t.id}_qualities"` +
-					`disabled="disabled" value="${quality}" id="${inputId}"  ` +
-					`${(quality === defaultValue ? ' checked="checked"' : '')}/>` +
-					`<label for="${inputId}" class="${t.options.classPrefix}qualities-selector-label` +
-					`${(quality === defaultValue ? ` ${t.options.classPrefix}qualities-selected` : '')}">` +
-					`${src.title || quality}</label>` +
-					`</li>`;
+				player.qualitiesContainer.querySelector('ul').innerHTML += `<li class="${t.options.classPrefix}qualities-selector-list-item">` +
+					`<input class="${t.options.classPrefix}qualities-selector-input ${(quality === defaultValue ? `${t.options.classPrefix}qualities-selected-input` : '')}" type="radio" name="${t.id}_qualities" disabled="disabled" ` +
+					`value="${quality}" id="${inputId}" ${(quality === defaultValue ? ' checked="checked"' : '')} />` +
+					`<label for="${inputId}" class="${t.options.classPrefix}qualities-selector-label ${(quality === defaultValue ? ` ${t.options.classPrefix}qualities-selected` : '')}">` +
+					`${src.title || quality} </label></li>`;
 			}
 		});
+
+		let isHidden = true;
 		const
-			inEvents = ['mouseenter', 'focusin'],
-			outEvents = ['mouseleave', 'focusout'],
+			qualityContainer = player.qualitiesContainer,
+			qualityButton = player.qualitiesContainer.querySelector(`button`),
+			qualitiesSelector = player.qualitiesContainer.querySelector(`.${t.options.classPrefix}qualities-selector`),
+			qualitiesList = player.qualitiesContainer.querySelector(`.${t.options.classPrefix}qualities-selector-list`),
 			// Enable inputs after they have been appended to controls to avoid tab and up/down arrow focus issues
-			radios = player.qualitiesButton.querySelectorAll('input[type="radio"]'),
-			labels = player.qualitiesButton.querySelectorAll(`.${t.options.classPrefix}qualities-selector-label`),
-			selector = player.qualitiesButton.querySelector(`.${t.options.classPrefix}qualities-selector`)
+			radios = player.qualitiesContainer.querySelectorAll('input[type="radio"]'),
+			labels = player.qualitiesContainer.querySelectorAll(`.${t.options.classPrefix}qualities-selector-label`)
 		;
 
-		// hover or keyboard focus
-		for (let i = 0, total = inEvents.length; i < total; i++) {
-			player.qualitiesButton.addEventListener(inEvents[i], () => {
-				mejs.Utils.removeClass(selector, `${t.options.classPrefix}offscreen`);
-				selector.style.height = `${selector.querySelector('ul').offsetHeight}px`;
-				selector.style.top = `${(-1 * parseFloat(selector.offsetHeight))}px`;
-			});
+		function hideSelector() {
+			mejs.Utils.addClass(qualitiesSelector, `${t.options.classPrefix}offscreen`);
+			qualityButton.setAttribute('aria-expanded', 'false');
+			qualityButton.focus();
+			isHidden = true;
 		}
 
-		for (let i = 0, total = outEvents.length; i < total; i++) {
-			player.qualitiesButton.addEventListener(outEvents[i], () => {
-				setTimeout(() => {
-					mejs.Utils.addClass(selector, `${t.options.classPrefix}offscreen`);
-				}, 50);
-			});
+		function showSelector() {
+			mejs.Utils.removeClass(qualitiesSelector, `${t.options.classPrefix}offscreen`);
+			qualitiesSelector.style.height = `${qualitiesSelector.querySelector('ul').offsetHeight}px`;
+			qualitiesSelector.style.top = `${(-1 * parseFloat(qualitiesSelector.offsetHeight))}px`;
+			qualityButton.setAttribute('aria-expanded', 'true');
+			qualitiesSelector.querySelector('.' + t.options.classPrefix + 'qualities-selected-input').focus();
+			isHidden = false;
 		}
+
+		qualityButton.addEventListener('click', () => {
+			if (isHidden === true) {
+				showSelector();
+			} else {
+				hideSelector();
+			}
+		});
+
+		qualitiesList.addEventListener('focusout',  (event) =>{
+			if (!qualityContainer.contains(event.relatedTarget)) {
+				hideSelector();
+			}
+		});
+
+		qualityButton.addEventListener('mouseenter',  () =>{
+			showSelector();
+		});
+
+		qualityContainer.addEventListener('mouseleave',  () =>{
+			hideSelector();
+		});
+
+		// Close with Escape key.
+		// Allow up/down arrow to change the selected radio without changing the volume.
+		qualityContainer.addEventListener('keydown', (event) => {
+			if(event.key === "Escape"){
+				hideSelector();
+			}
+
+			event.stopPropagation();
+		});
 
 		for (let i = 0, total = radios.length; i < total; i++) {
 			const radio = radios[i];
@@ -213,7 +244,7 @@ Object.assign(MediaElementPlayer.prototype, {
 					t.updateQualityButton(this, player, currentQuality);
 					t.switchHLSQuality(player, media);
 				} else {
-					t.updateQualityButton(this, player, currentQuality);
+					currentQuality = t.updateQualityButton(this, player, currentQuality);
 
 					let currentTime = media.currentTime;
 					const paused = media.paused;
@@ -238,6 +269,7 @@ Object.assign(MediaElementPlayer.prototype, {
 				}
 			});
 		}
+
 		for (let i = 0, total = labels.length; i < total; i++) {
 			labels[i].addEventListener('click', function () {
 				const
@@ -248,10 +280,6 @@ Object.assign(MediaElementPlayer.prototype, {
 			});
 		}
 
-		//Allow up/down arrow to change the selected radio without changing the volume.
-		selector.addEventListener('keydown', (e) => {
-			e.stopPropagation();
-		});
 	},
 
 	/**
@@ -262,8 +290,8 @@ Object.assign(MediaElementPlayer.prototype, {
 	 */
 	cleanquality (player) {
 		if (player) {
-			if (player.qualitiesButton) {
-				player.qualitiesButton.remove();
+			if (player.qualitiesContainer) {
+				player.qualitiesContainer.remove();
 			}
 		}
 	},
@@ -315,9 +343,10 @@ Object.assign(MediaElementPlayer.prototype, {
 		for (let i = 0; i < media.children.length; i++) {
 			let mediaNode = media.children[i];
 			if (mediaNode.tagName === 'VIDEO') {
-				while (mediaNode.firstChild) {
-					mediaNode.removeChild(mediaNode.firstChild);
-				}
+				const sourceNodes = mediaNode.querySelectorAll('source');
+				Array.from(sourceNodes).forEach((sourceNode) => {
+					mediaNode.removeChild(sourceNode);
+				});
 			}
 		}
 	},
@@ -358,7 +387,7 @@ Object.assign(MediaElementPlayer.prototype, {
 	 * @param {MediaElement} media
 	 */
 	switchDashQuality (player, media) {
-		const radios = player.qualitiesButton.querySelectorAll('input[type="radio"]');
+		const radios = player.qualitiesContainer.querySelectorAll('input[type="radio"]');
 		for (let index = 0; index < radios.length; index++) {
 			if (radios[index].checked) {
 				if (index === 0 ) {
@@ -377,7 +406,7 @@ Object.assign(MediaElementPlayer.prototype, {
 	 * @param {MediaElement} media
 	 */
 	switchHLSQuality (player, media) {
-		const radios = player.qualitiesButton.querySelectorAll('input[type="radio"]');
+		const radios = player.qualitiesContainer.querySelectorAll('input[type="radio"]');
 		for (let index = 0; index < radios.length; index++) {
 			if (radios[index].checked) {
 				if (index === 0 ) {
@@ -393,33 +422,34 @@ Object.assign(MediaElementPlayer.prototype, {
 	 * Responsible for switching the video source when quality source was auto created from dash manifest
 	 * @param {Element} self the check quality radio button
 	 * @param {MediaElementPlayer} player
-	 * @param {String} currentQuality the label for the current quality selection
 	 */
-	updateQualityButton (self, player, currentQuality) {
+	updateQualityButton (self, player) {
 		const t = this;
 		const
 			newQuality = self.value
 		;
-		currentQuality = newQuality;
 
-		const selected = player.qualitiesButton.querySelectorAll(`.${t.options.classPrefix}qualities-selected`);
-		for (let i = 0, total = selected.length; i < total; i++) {
-			mejs.Utils.removeClass(selected[i], `${t.options.classPrefix}qualities-selected`);
+		const formerSelected = player.qualitiesContainer.querySelectorAll(`.${t.options.classPrefix}qualities-selected`);
+		for (let i = 0, total = formerSelected.length; i < total; i++) {
+			mejs.Utils.removeClass(formerSelected[i], `${t.options.classPrefix}qualities-selected`);
+			formerSelected[i].parentElement.querySelector('input').classList.remove(`${t.options.classPrefix}qualities-selected-input`);
 		}
 
 		self.checked = true;
-		const siblings = mejs.Utils.siblings(self, (el) => mejs.Utils.hasClass(el, `${t.options.classPrefix}qualities-selector-label`));
-		for (let j = 0, total = siblings.length; j < total; j++) {
-			mejs.Utils.addClass(siblings[j], `${t.options.classPrefix}qualities-selected`);
+		const currentSelected = mejs.Utils.siblings(self, (el) => mejs.Utils.hasClass(el, `${t.options.classPrefix}qualities-selector-label`));
+		for (let j = 0, total = currentSelected.length; j < total; j++) {
+			mejs.Utils.addClass(currentSelected[j], `${t.options.classPrefix}qualities-selected`);
+			currentSelected[j].parentElement.querySelector('input').classList.add(`${t.options.classPrefix}qualities-selected-input`);
 		}
 
-		player.qualitiesButton.querySelector('button').innerHTML = newQuality;
+		player.qualitiesContainer.querySelector('button').innerHTML = newQuality;
+		return newQuality;
 	},
 
 	/**
-	* Returns the quality represnetaion base on the height of the loaded video
-	* @param {Number} height the pixel height of the video
-	**/
+	 * Returns the quality represnetaion base on the height of the loaded video
+	 * @param {Number} height the pixel height of the video
+	 **/
 	getQualityFromHeight (height) {
 		if (height >= 4320) {
 			return "8K UHD";

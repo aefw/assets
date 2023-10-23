@@ -44,11 +44,11 @@ $.extend($.jgrid,{
 		gridstate  =  $($t).jqGrid('jqGridExport', { exptype : "jsonstring", ident:"", root:"", data : o.saveData });
 		data = '';
 		if( o.saveData ) {
-			data = $($t.grid.bDiv).find(".ui-jqgrid-btable tbody:first").html();
+			data = $($t.grid.bDiv).find(".ui-jqgrid-btable tbody").first().html();
 			var firstrow  = data.indexOf("</tr>");
 			data = data.slice(firstrow + 5);
 		}
-		if($.isFunction(o.beforeSetItem)) {
+		if($.jgrid.isFunction(o.beforeSetItem)) {
 			ret = o.beforeSetItem.call($t, gridstate);
 			if(ret != null) {
 				gridstate = ret;
@@ -136,13 +136,13 @@ $.extend($.jgrid,{
 			}
 		}
 		ret = $.jgrid.parseFunc( gridstring );
-		if( ret && $.type(ret) === 'object') {
+		if( ret && $.jgrid.type(ret) === 'object') {
 			if($t.grid) {
 				$.jgrid.gridUnload( jqGridId );
 			}
-			if($.isFunction(o.beforeSetGrid)) {
+			if($.jgrid.isFunction(o.beforeSetGrid)) {
 				tmp = o.beforeSetGrid( ret );
-				if(tmp && $.type(tmp) === 'object') {
+				if(tmp && $.jgrid.type(tmp) === 'object') {
 					ret = tmp;
 				}
 			}
@@ -173,7 +173,7 @@ $.extend($.jgrid,{
 			}
 			var grid = $("#"+jqGridId).jqGrid( ret );
 			grid.jqGrid('delRowData','norecs');
-			if( o.restoreData && $.trim( data ) !== '') {
+			if( o.restoreData && $.jgrid.trim( data ) !== '') {
 				grid.append( data );
 			}
 			grid.jqGrid( 'setGridParam', prm);
@@ -264,11 +264,25 @@ $.extend($.jgrid,{
 				});
 			}
 			// grouping
+			if(grid.jqGrid('isGroupHeaderOn')) {
+				grid.jqGrid('refreshGroupHeaders');
+			}
+			// searchcol
+			if(ret.searchCols) {
+				for(var key in ret._results) {
+					if(ret._results.hasOwnProperty(key)) {
+						$("#jqs_" + jqGridId + "_"+key).val(ret._results[key].v);
+					}
+				}
+			}
 			// pivotgrid
+			// 
+			// inline navigator
 			if(ret.inlineNav && iN) {
 				grid.jqGrid('setGridParam', { inlineNav:false });
 				grid.jqGrid('inlineNav', ret.pager, iN);
 			}
+			// toolbar filter
 			if(ret.filterToolbar && fT) {
 				grid.jqGrid('setGridParam', { filterToolbar:false });
 				fT.restoreFromFilters = true;
@@ -280,7 +294,7 @@ $.extend($.jgrid,{
 			}
 			grid[0].updatepager(true, true);
 
-			if($.isFunction(o.afterSetGrid)) {
+			if($.jgrid.isFunction(o.afterSetGrid)) {
 				o.afterSetGrid( grid );
 			}
 			if(o.clearAfterLoad) {
@@ -416,7 +430,7 @@ $.extend($.jgrid,{
 						if(stat === 'success') {
 							xmlConvert(xml.responseXML,o);
 							$($t).triggerHandler("jqGridImportComplete", [xml, o]);
-							if($.isFunction(o.importComplete)) {
+							if($.jgrid.isFunction(o.importComplete)) {
 								o.importComplete(xml);
 							}
 						}
@@ -431,7 +445,7 @@ $.extend($.jgrid,{
 					if(xmld) {
 						xmlConvert(xmld,o);
 						$($t).triggerHandler("jqGridImportComplete", [xmld, o]);
-						if($.isFunction(o.importComplete)) {
+						if($.jgrid.isFunction(o.importComplete)) {
 							o.importComplete(xmld);
 						}
 					}
@@ -447,7 +461,7 @@ $.extend($.jgrid,{
 						try {
 							jsonConvert(json.responseText,o );
 							$($t).triggerHandler("jqGridImportComplete", [json, o]);
-							if($.isFunction(o.importComplete)) {
+							if($.jgrid.isFunction(o.importComplete)) {
 								o.importComplete(json);
 							}
 						} catch (ee){}
@@ -459,7 +473,7 @@ $.extend($.jgrid,{
 				if(o.impstring && typeof o.impstring === 'string') {
 					jsonConvert(o.impstring,o );
 					$($t).triggerHandler("jqGridImportComplete", [o.impstring, o]);
-					if($.isFunction(o.importComplete)) {
+					if($.jgrid.isFunction(o.importComplete)) {
 						o.importComplete(o.impstring);
 					}
 				}
@@ -487,6 +501,10 @@ $.extend($.jgrid,{
 					gprm.colModel.splice(0,1);
 				}
 				if(gprm.multiselect) {
+					gprm.colNames.splice(0,1);
+					gprm.colModel.splice(0,1);
+				}
+				if(gprm.searchCols) {
 					gprm.colNames.splice(0,1);
 					gprm.colModel.splice(0,1);
 				}
@@ -528,7 +546,7 @@ $.extend($.jgrid,{
 				if(o.exptype === "remote") {
 					var pdata = $.extend({},this.p.postData), expg;
 					pdata[o.oper] = o.tag;
-					if($.isFunction(o.beforeExport)) {
+					if($.jgrid.isFunction(o.beforeExport)) {
 						var result = o.beforeExport.call(this, pdata );
 						if( $.isPlainObject( result ) ) {
 							pdata = result;

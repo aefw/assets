@@ -1,7 +1,7 @@
 Package.describe({
     name: 'johndyer:mediaelement',
     summary: '*Official* MediaElement.js: <video> and <audio> made easy. One file. Any browser. Same UI.',
-    version: '4.2.16',
+    version: '7.0.0',
     git: 'https://github.com/mediaelement/mediaelement'
 });
 
@@ -39,11 +39,6 @@ Package.onUse(function(api) {
         'build/renderers/vimeo.js',
         'build/mejs-controls.svg',
         'build/mejs-controls.png',
-        'build/mediaelement-flash-audio.swf',
-        'build/mediaelement-flash-audio-ogg.swf',
-        'build/mediaelement-flash-video.swf',
-        'build/mediaelement-flash-video-hls.swf',
-        'build/mediaelement-flash-video-mdash.swf',
     ];
 
     if (api.addAssets) {

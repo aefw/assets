@@ -1,5 +1,3 @@
-'use strict';
-
 /*!
  * This is a `i18n` language object.
  *
@@ -13,15 +11,14 @@
  * @see core/i18n.js
  */
 (function (exports) {
+    'use strict';
+
 	if (exports.fr === undefined) {
 		exports.fr = {
 			'mejs.plural-form': 2,
 
 			// core/mediaelement.js
 			'mejs.download-file': 'Télécharger le fichier',
-
-			// renderers/flash.js
-			'mejs.install-flash': 'Vous utilisez un navigateur sur lequel Flash ne semble pas installé ou activé. Veuillez activer le plugin Flash ou télécharger la dernière version sur https://get.adobe.com/flashplayer/',
 
 			// features/fullscreen.js
 			'mejs.fullscreen': 'Plein écran',

@@ -45,7 +45,12 @@ $.jgrid.regional["fr"] = {
 		nomorerecs : "Plus de données...",
 		scrollPullup: "Glisser vers le haut pour charger plus de données...",
 		scrollPulldown : "Glisser vers le bas pour rafraîchir...",
-		scrollRefresh : "Relâcher pour rafraîchir..."
+		scrollRefresh : "Relâcher pour rafraîchir...",
+		valueCheckbox : "Case à cocher",
+		valT : "cochée",
+		valF : "décochée",
+		selectLine : "Sélectionner une ligne",
+		selectAllLines : "Sélectionner toutes les lignes"
 	},
 	search : {
 		caption: "Recherche...",
@@ -58,7 +63,11 @@ $.jgrid.regional["fr"] = {
 		addsubgrup : "Add subgroup",
 		addrule : "Add rule",
 		delgroup : "Delete group",
-		delrule : "Delete rule"
+		delrule : "Delete rule",
+		Close : "Close",
+		Operand : "Operand : ",
+		Operation : "Oper : ",
+		filterFor : "filtre pour"
 	},
 	edit : {
 		addCaption: "Ajouter",
@@ -176,7 +185,8 @@ $.jgrid.regional["fr"] = {
 		searchTitle : "Prendre les items avec la valeur:",
 		freeze : "Figer",
 		unfreeze : "Relâcher",
-		reorder : "Déplacer pour changer l'ordre"
+		reorder : "Déplacer pour changer l'ordre",
+		hovermenu: "Click for column quick actions"
 	}
 };
 }));

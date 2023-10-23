@@ -48,7 +48,11 @@ $.jgrid.regional["cn"] = {
 		nomorerecs : "没有更多记录...",
 		scrollPullup: "加载更多...",
 		scrollPulldown : "刷新...",
-		scrollRefresh : "滚动刷新..."
+		scrollRefresh : "滚动刷新...",
+		valT : "checked",
+		valF : "unchecked",
+		selectLine : "Select row",
+		selectAllLines : "Select all rows"
     },
     search : {
         caption: "搜索...",
@@ -61,7 +65,11 @@ $.jgrid.regional["cn"] = {
 		addsubgrup : "添加条件组",
 		addrule : "添加条件",
 		delgroup : "删除条件组",
-		delrule : "删除条件"		
+		delrule : "删除条件",
+		Close : "Close",
+		Operand : "Operand : ",
+		Operation : "Oper : ",
+		filterFor : "filter for"
     },
     edit : {
         addCaption: "添加记录",
@@ -220,7 +228,8 @@ $.jgrid.regional["cn"] = {
 		searchTitle : "查找:",
 		freeze : "冻结",
 		unfreeze : "取消冻结",
-		reorder : "重新排序"
+		reorder : "重新排序",
+		hovermenu: "Click for column quick actions"
 	}
 };
 }));

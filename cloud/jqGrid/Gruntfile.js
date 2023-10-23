@@ -22,7 +22,10 @@ var
 		"jquery.sortable",
 		"grid.utils",
 		"grid.export",
-		"grid.aria"
+		"grid.aria",
+		"grid.transposed",
+		"grid.frozenrows",
+		"grid.database"
 	],
 
 	gridFiles = allFiles.map(function( file ) {
@@ -61,7 +64,7 @@ var
 	}
 
 	function expandFiles( files ) {
-		return grunt.util._.pluck( grunt.file.expandMapping( files ), "src" ).map(function( values ) {
+		return grunt.util._.map( grunt.file.expandMapping( files ), "src" ).map(function( values ) {
 			return values[ 0 ];
 		});
 	}
@@ -83,13 +86,13 @@ var
 
 
 	function createBanner( date ) {
-		return "/**\n*\n"+
+		return date === true ? "/**\n*\n"+
 			"* @license Guriddo <%= pkg.name %> JS - v<%= pkg.version %> " +
 			( date ? "- <%= grunt.template.today('isoDate') %>\n" : "\n") +
 			"* Copyright(c) 2008, <%=pkg.author.name%>, <%=pkg.author.email%>\n"+
 			"* \n"+
 			"* License: <%= pkg.licenses[0].url %>\n"+
-			"*/\n";
+			"*/\n" : "";
 	}
 	// grid files min
 	gridFiles.concat( ).forEach(function( file ) {

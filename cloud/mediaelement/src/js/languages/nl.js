@@ -1,5 +1,3 @@
-'use strict';
-
 /*!
  * This is a `i18n` language object.
  *
@@ -13,15 +11,14 @@
  * @see core/i18n.js
  */
 (function (exports) {
+    'use strict';
+
 	if (exports.nl === undefined) {
 		exports.nl = {
 			'mejs.plural-form': 1,
 
 			// core/mediaelement.js
 			'mejs.download-file': 'Bestand downloaden',
-
-			// renderers/flash.js
-			'mejs.install-flash': 'U gebruikt een browser die geen Flash Player heeft ingeschakeld of geïnstalleerd. Zet de Flash Player plug-in of download de nieuwste versie van https://get.adobe.com/flashplayer/',
 
 			// features/fullscreen.js
 			'mejs.fullscreen': 'Volledig scherm',

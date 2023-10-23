@@ -18,6 +18,7 @@ array=( \
 	https://github.com/mediaelement/mediaelement.git \
 	https://github.com/mediaelement/mediaelement-plugins.git \
 	https://github.com/armaaar/JQuery-Sticky-Table \
+	https://github.com/ushelp/EasyQRCodeJS \
 )
 
 for i in "${array[@]}"
@@ -40,3 +41,6 @@ npm install csso
 npm run build
 cd ../
 # END elFinder build
+
+# remove demo* test* docs* docu* .*
+find "./" -type d -name 'demo*' -o -name 'test*' -o -name 'exam*' -o -name 'docs*' -o -name 'docu*' -o -name '.git' -o -name '.gith*' -o -name '.npm*' -o -name 'node_modules*' -o -name '.trash*' -exec rm -r {} \;

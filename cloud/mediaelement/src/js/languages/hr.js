@@ -1,5 +1,3 @@
-'use strict';
-
 /*!
  * This is a `i18n` language object.
  *
@@ -11,15 +9,14 @@
  * @see core/i18n.js
  */
 (function (exports) {
+    'use strict';
+
 	if (exports.hr === undefined) {
 		exports.hr = {
 			'mejs.plural-form': 7,
 
 			// core/mediaelement.js
 			'mejs.download-file': 'Preuzmi datoteku',
-
-			// renderers/flash.js
-			'mejs.install-flash': 'Koristite preglednik koji nema omogućen ili instaliran Flash preglednik. Molimo Vas uključite Flash dodatak ili preuzmite najnoviju verziju s https://get.adobe.com/flashplayer/',
 
 			// features/fullscreen.js
 			'mejs.fullscreen': 'Puni zaslon',

@@ -30,7 +30,7 @@ $.jgrid.extend({
 			common = $.jgrid.styleUI[($t.p.styleUI || 'jQueryUI')].common,
 			index = i;
 			$($t).triggerHandler("jqGridBeforeSetTreeNode", [index, len]);
-			if($.isFunction($t.p.beforeSetTreeNode)) {
+			if($.jgrid.isFunction($t.p.beforeSetTreeNode)) {
 				$t.p.beforeSetTreeNode.call($t, index, len);
 			}
 			while(i<len) {
@@ -109,7 +109,7 @@ $.jgrid.extend({
 								$($t).jqGrid("expandNode",$t.p.data[pos]);
 							}
 						}
-						return false;
+						//return false;
 					});
 				if($t.p.ExpandColClick === true) {
 					$($t.rows[i].cells[expCol])
@@ -129,13 +129,13 @@ $.jgrid.extend({
 								}
 							}
 							$($t).jqGrid("setSelection",ind2);
-							return false;
+							//return false;
 						});
 				}
 				i++;
 			}
 			$($t).triggerHandler("jqGridAfterSetTreeNode", [index, len]);			
-			if($.isFunction($t.p.afterSetTreeNode)) {
+			if($.jgrid.isFunction($t.p.afterSetTreeNode)) {
 				$t.p.afterSetTreeNode.call($t, index, len);
 			}
 		});
@@ -216,10 +216,10 @@ $.jgrid.extend({
 	},
 	expandRow: function (record){
 		this.each(function(){
-			var $t = this;
+			var $t = this, $rootpages;
 			//bvn
 			if (!$t.p.treeGrid_bigData) {
-				var $rootpages = $t.p.lastpage;
+				$rootpages = $t.p.lastpage;
 			}
 			if(!$t.grid || !$t.p.treeGrid) {return;}
 			var childern = $($t).jqGrid("getNodeChildren",record),
@@ -230,7 +230,7 @@ $.jgrid.extend({
 			if(ret === undefined ) {
 				ret = true;
 			}
-			if(ret && $.isFunction($t.p.beforeExpandTreeGridRow)) {
+			if(ret && $.jgrid.isFunction($t.p.beforeExpandTreeGridRow)) {
 				ret =  $t.p.beforeExpandTreeGridRow.call($t, rowid, record, childern);
 			}
 			if( ret === false ) { return; }
@@ -242,7 +242,7 @@ $.jgrid.extend({
 				}
 			});
 			$($t).triggerHandler("jqGridAfterExpandTreeGridRow", [rowid, record, childern]);
-			if($.isFunction($t.p.afterExpandTreeGridRow)) {
+			if($.jgrid.isFunction($t.p.afterExpandTreeGridRow)) {
 				$t.p.afterExpandTreeGridRow.call($t, rowid, record, childern);
 			}
 			//bvn
@@ -263,7 +263,7 @@ $.jgrid.extend({
 			if(ret === undefined ) {
 				ret = true;
 			}			
-			if(ret &&  $.isFunction($t.p.beforeCollapseTreeGridRow)) { 
+			if(ret &&  $.jgrid.isFunction($t.p.beforeCollapseTreeGridRow)) { 
 				ret = $t.p.beforeCollapseTreeGridRow.call($t, rowid, record, childern);
 			}
 			if( ret === false ) { return; }
@@ -275,7 +275,7 @@ $.jgrid.extend({
 				}
 			});
 			$($t).triggerHandler("jqGridAfterCollapseTreeGridRow", [rowid, record, childern]);
-			if($.isFunction($t.p.afterCollapseTreeGridRow)) {
+			if($.jgrid.isFunction($t.p.afterCollapseTreeGridRow)) {
 				$t.p.afterCollapseTreeGridRow.call($t, rowid, record, childern);
 			}			
 		});
@@ -606,7 +606,7 @@ $.jgrid.extend({
 				if(ret === undefined ) {
 					ret = true;
 				}			
-				if( ret && $.isFunction(this.p.beforeExpandTreeGridNode) ) {
+				if( ret && $.jgrid.isFunction(this.p.beforeExpandTreeGridNode) ) {
 					ret =  this.p.beforeExpandTreeGridNode.call(this, id, rc );
 				}
 				if( ret === false ) { return; }
@@ -633,7 +633,7 @@ $.jgrid.extend({
 					}
 				}
 				$($t).triggerHandler("jqGridAfterExpandTreeGridNode", [id, rc]);
-				if($.isFunction(this.p.afterExpandTreeGridNode)) {
+				if($.jgrid.isFunction(this.p.afterExpandTreeGridNode)) {
 					this.p.afterExpandTreeGridNode.call(this, id, rc );
 				}
 			}
@@ -651,14 +651,14 @@ $.jgrid.extend({
 				if(ret === undefined ) {
 					ret = true;
 				}			
-				if( ret &&  $.isFunction(this.p.beforeCollapseTreeGridNode) ) {
+				if( ret &&  $.jgrid.isFunction(this.p.beforeCollapseTreeGridNode) ) {
 					ret = this.p.beforeCollapseTreeGridNode.call(this, id, rc );
 				}
 				rc[expanded] = false;
 				if( ret === false ) { return; }
 				$("div.treeclick",rc1).removeClass(this.p.treeIcons.minus+" tree-minus").addClass(this.p.treeIcons.plus+" tree-plus");
 				$($t).triggerHandler("jqGridAfterCollapseTreeGridNode", [id, rc]);
-				if($.isFunction(this.p.afterCollapseTreeGridNode)) {
+				if($.jgrid.isFunction(this.p.afterCollapseTreeGridNode)) {
 					this.p.afterCollapseTreeGridNode.call(this, id, rc );
 				}
 			}
@@ -689,7 +689,7 @@ $.jgrid.extend({
 			$.each(records, function(index) {
 				var id  = $.jgrid.getAccessor(this, $t.p.localReader.id);
 				if($.inArray(id, ids) !== -1) {
-					$('#'+$.jgrid.jqID($t.p.id)+ ' tbody tr:eq('+(j)+')').after($('#'+$.jgrid.jqID($t.p.id)+' tbody tr#'+$.jgrid.jqID(id)));
+					$('#'+$.jgrid.jqID($t.p.id)+ ' tbody tr').eq( j ).after($('#'+$.jgrid.jqID($t.p.id)+' tbody tr#'+$.jgrid.jqID(id)));
 					j++;
 				}
 			});
@@ -765,14 +765,20 @@ $.jgrid.extend({
 		});
 		return success;
 	},
-	delTreeNode : function (rowid) {
+	delTreeNode : function (rowid, reload) {
 		return this.each(function () {
 			var $t = this, rid = $t.p.localReader.id, i,
-			left = $t.p.treeReader.left_field,
+			left = $t.p.treeReader.left_field, parent,
 			right = $t.p.treeReader.right_field, myright, width, res, key;
 			if(!$t.grid || !$t.p.treeGrid) {return;}
 			rowid = $.jgrid.stripPref($t.p.idPrefix, rowid);
 			var rc = $t.p._index[rowid];
+			if(typeof reload === undefined) {
+				reload = false;
+			}
+			if(reload) {
+				parent = $(this).jqGrid("getNodeParent",$t.p.data[rc]);
+			}
 			if (rc !== undefined) {
 				// nested
 				myright = parseInt($t.p.data[rc][right],10);
@@ -804,6 +810,15 @@ $.jgrid.extend({
 								res[key][right] = parseInt(res[key][right],10) - width ;
 							}
 						}
+					}
+				}
+				if(reload) {
+					var isLeaf = this.p.treeReader.leaf_field;
+					var chld = $(this).jqGrid('getNodeChildren', parent);
+					if(parent[isLeaf] && chld.length) {
+						$(this).jqGrid('setLeaf', parent, false);
+					} else if(!rc[isLeaf] && chld.length === 0) {
+						$(this).jqGrid('setLeaf', parent, true);
 					}
 				}
 			}
@@ -916,7 +931,7 @@ $.jgrid.extend({
 				// incremet th index of child to be inserted
 				if( i === false ) {
 					throw "Parent item with id: " + rowind + " ("+ parentid+") can't be found";
-					return;
+					//return;
 				} else {
 					i++;
 				}

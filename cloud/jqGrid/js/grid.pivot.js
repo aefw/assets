@@ -136,12 +136,12 @@ $.jgrid.extend({
 			 */
 			function calculation(oper, v, field, rc, _cnt)  {
 				var ret;
-				if( $.isFunction(oper)) {
+				if( $.jgrid.isFunction(oper)) {
 					ret = oper.call($t, v, field, rc);
 				} else {
 					switch (oper) {
 						case  "sum" : 
-							ret = parseFloat(v||0) + parseFloat((rc[field]||0));
+							ret = $.jgrid.floatNum(v) + $.jgrid.floatNum(rc[field]);
 							break;
 						case "count" :
 							if(v==="" || v == null) {
@@ -155,20 +155,20 @@ $.jgrid.extend({
 							break;
 						case "min" : 
 							if(v==="" || v == null) {
-								ret = parseFloat(rc[field]||0);
+								ret = $.jgrid.floatNum(rc[field]);
 							} else {
-								ret =Math.min(parseFloat(v),parseFloat(rc[field]||0));
+								ret =Math.min($.jgrid.floatNum(v),$.jgrid.floatNum(rc[field]));
 							}
 							break;
 						case "max" : 
 							if(v==="" || v == null) {
-								ret = parseFloat(rc[field]||0);
+								ret = $.jgrid.floatNum(rc[field]);
 							} else {
-								ret = Math.max(parseFloat(v),parseFloat(rc[field]||0));
+								ret = Math.max($.jgrid.floatNum(v),$.jgrid.floatNum(rc[field]));
 							}
 							break;
 						case "avg" : //avg grouping
-							ret = (parseFloat(v||0) * (_cnt -1) + parseFloat(rc[field]||0) ) /_cnt;
+							ret = ($.jgrid.floatNum(v) * (_cnt -1) + $.jgrid.floatNum(rc[field]) ) /_cnt;
 							break;	
 					}
 				}
@@ -181,7 +181,7 @@ $.jgrid.extend({
 			function agregateFunc ( row, aggr, value, curr) {
 				// default is sum
 				var arrln = aggr.length, i, label, j, jv, mainval="",swapvals=[], swapstr, _cntavg = 1, lbl;
-				if($.isArray(value)) {
+				if( Array.isArray(value) ) {
 					jv = value.length;
 					swapvals = value;
 				} else {
@@ -197,9 +197,9 @@ $.jgrid.extend({
 						swapstr = typeof aggr[i].aggregator === 'string' ? aggr[i].aggregator : 'cust';
 							
 						if(value == null) {
-							label = $.trim(aggr[i].member)+"_" + swapstr;
+							label = $.jgrid.trim(aggr[i].member)+"_" + swapstr;
 							vl = label;
-							swapvals[0]= aggr[i].label || (swapstr + " " +$.trim(aggr[i].member));
+							swapvals[0]= aggr[i].label || (swapstr + " " +$.jgrid.trim(aggr[i].member));
 						} else {
 							vl = value[j].replace(/\s+/g, '');
 							try {
@@ -236,9 +236,9 @@ $.jgrid.extend({
 				o.yDimension[0].converter =  function(){ return '_r_Totals'; };
 			}
 			// build initial columns (colModel) from xDimension
-			xlen = $.isArray(o.xDimension) ? o.xDimension.length : 0;
+			xlen = Array.isArray(o.xDimension) ? o.xDimension.length : 0;
 			ylen = o.yDimension.length;
-			aggrlen  = $.isArray(o.aggregates) ? o.aggregates.length : 0;
+			aggrlen  = Array.isArray(o.aggregates) ? o.aggregates.length : 0;
 			if(xlen === 0 || aggrlen === 0) {
 				throw("xDimension or aggregates optiona are not set!");
 			}
@@ -262,7 +262,7 @@ $.jgrid.extend({
 				i = 0;
 				// build the data from xDimension
 				do {
-					xValue[i]  = $.trim(row[o.xDimension[i].dataName]);
+					xValue[i]  = $.jgrid.trim(row[o.xDimension[i].dataName]);
 					tmp[o.xDimension[i].dataName] = xValue[i];
 					i++;
 				} while( i < xlen );
@@ -278,9 +278,13 @@ $.jgrid.extend({
 					if(ylen>=1) {
 						// build the cols set in yDimension
 						for(k=0;k<ylen;k++) {
-							yValue[k] = $.trim(row[o.yDimension[k].dataName]);
+							yValue[k] = $.jgrid.trim(row[o.yDimension[k].dataName]);
+							if(yValue[k] === undefined) {
+								yValue[k] = null;
+								continue;
+							}
 							// Check to see if we have user defined conditions
-							if(o.yDimension[k].converter && $.isFunction(o.yDimension[k].converter)) {
+							if(o.yDimension[k].converter && $.jgrid.isFunction(o.yDimension[k].converter)) {
 								yValue[k] = o.yDimension[k].converter.call(this, yValue[k], xValue, yValue);
 							}
 						}
@@ -300,8 +304,12 @@ $.jgrid.extend({
 						// make the recalculations 
 						if(ylen>=1) {
 							for(k=0;k<ylen;k++) {
-								yValue[k] = $.trim(row[o.yDimension[k].dataName]);
-								if(o.yDimension[k].converter && $.isFunction(o.yDimension[k].converter)) {
+								yValue[k] = $.jgrid.trim(row[o.yDimension[k].dataName]);
+								if(yValue[k] === undefined) {
+									yValue[k] = null;
+									continue;
+								}				
+								if(o.yDimension[k].converter && $.jgrid.isFunction(o.yDimension[k].converter)) {
 									yValue[k] = o.yDimension[k].converter.call(this, yValue[k], xValue, yValue);
 								}
 							}
@@ -467,9 +475,9 @@ $.jgrid.extend({
 					for(i=xlen;i<columns.length;i++) {
 						nm = columns[i].name;
 						if(!summaries[nm]) {
-							summaries[nm] = parseFloat(pivotrows[plen][nm] || 0);
+							summaries[nm] = $.jgrid.floatNum(pivotrows[plen][nm]);
 						} else {
-							summaries[nm] += parseFloat(pivotrows[plen][nm] || 0);
+							summaries[nm] += $.jgrid.floatNum(pivotrows[plen][nm]);
 						}
 					}
 				}
@@ -505,10 +513,10 @@ $.jgrid.extend({
 			}
 
 			function pivot( data) {
-				if( $.isFunction( pivotOpt.onInitPivot ) ) {
+				if( $.jgrid.isFunction( pivotOpt.onInitPivot ) ) {
 					pivotOpt.onInitPivot.call( $t );
 				}
-				if(!$.isArray(data)) {
+				if( !Array.isArray(data) ) {
 					//throw "data provides is not an array";
 					data = [];
 				}
@@ -562,7 +570,7 @@ $.jgrid.extend({
 				if(pivotOpt.frozenStaticCols) {
 					jQuery($t).jqGrid("setFrozenColumns");
 				}
-				if( $.isFunction( pivotOpt.onCompletePivot ) ) {
+				if( $.jgrid.isFunction( pivotOpt.onCompletePivot ) ) {
 					pivotOpt.onCompletePivot.call( $t );
 				}
 				if(pivotOpt.loadMsg) {

@@ -17,6 +17,17 @@
 //module begin
 $.extend($.jgrid,{
 //window.jqGridUtils = {
+	isJSON : function (mixed) {
+		if (typeof mixed !== 'string') {
+			mixed = JSON.stringify( mixed );
+		}
+		try {
+			JSON.parse( mixed );
+			return true;
+		} catch (e) {
+			return false;
+		}
+	},
 	stringify : function(obj) {
 		return JSON.stringify(obj,function(key, value){
             return (typeof value === 'function' ) ? value.toString() : value;
@@ -26,9 +37,9 @@ $.extend($.jgrid,{
 		return JSON.parse(str,function(key, value){
 			if(typeof value === "string" && value.indexOf("function") !== -1) {
 				var sv = value.split(" ");
-				sv[0] = $.trim( sv[0].toLowerCase() );
+				sv[0] = $.jgrid.trim( sv[0].toLowerCase() );
 				if( (sv[0].indexOf('function') === 0) && value.trim().slice(-1) === "}") {
-					return  eval('('+value+')');
+					return  $.jgrid.runCode( value ); //eval('('+value+')');
 				} else {
 					return value;
 				}
@@ -139,7 +150,7 @@ $.extend($.jgrid,{
 		var addNode = function ( hash, key, cnts, val ) {
 			if(typeof val === 'string') {
 				if( val.indexOf('function') !== -1) {
-					val =  eval( '(' + val +')'); // we need this in our implement
+					val =  $.jgrid.runCode( val ); //eval( '(' + val +')'); // we need this in our implement
 				} else {
 					switch(val) {
 						case '__EMPTY_ARRAY_' :
@@ -270,7 +281,7 @@ $.extend($.jgrid,{
 
 		fname = fname == null || fname === '' ? 'jqGridFile.txt' : fname;
 
-		if(!$.isArray(data) ) {
+		if( !Array.isArray(data) ) {
 			tmp[0]= data ;
 		} else {
 			tmp = data;	
@@ -294,6 +305,47 @@ $.extend($.jgrid,{
 				window.URL.revokeObjectURL(url);
 			}, 0);
 		}
+	},
+	csvToArray : function (str, delimiter) {
+		if(delimiter === undefined) {delimiter =",";}
+		var headers=[],arrMatches, arr=[], objr = {}, k=0, len, lines=0;
+		var objPattern = new RegExp(
+			(
+			// Delimiters.
+			"(\\" + delimiter + "|\\r?\\n|\\r|^)" +
+			// Quoted fields.
+			"(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +
+			// Standard fields.
+			"([^\"\\" + delimiter + "\\r\\n]*))"
+			),
+		"gi");
+
+		while (arrMatches = objPattern.exec(str)) {
+			var strMatchedDelimiter = arrMatches[1];
+			if ( strMatchedDelimiter.length && strMatchedDelimiter !== delimiter ) {
+				lines++;
+				objr = {};
+				k=0;
+			}
+			var strMatchedValue;
+			if (arrMatches[2]) {
+				strMatchedValue = arrMatches[2].replace(new RegExp("\"\"", "g"),"\"");
+			} else {
+				strMatchedValue = arrMatches[3];
+			}
+			if(lines === 0 ) {
+				headers.push(strMatchedValue);
+				len = headers.length;
+			} else {
+				objr[headers[k]] = strMatchedValue;
+				if(k===len-1) {
+					arr.push(objr);
+				} else {
+					k++;
+				}
+			}
+		}
+		return arr;
 	}
 });
 //module end

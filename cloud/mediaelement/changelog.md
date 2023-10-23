@@ -1,8 +1,90 @@
-### Version History
+# Version History
+
+*7.0.0* (2023/03/28)
+## Removal of flash support
+* Flash support removed, see [Migration Guide](MIGRATION.md) for more information about Breaking Changes. 
+Thanks to @jaapmarcus for initial PR.
+* Make `test` npm-script available to work on all plattforms.
+* HLS and MPEG-Dash renderer should now have working captions. (#2928)
+* Fix firefox bug on mouseout. (#2840) Thanks to @JoshStegmaier.
+
+*6.0.3* (2023/03/28)
+* `outline-style: auto` has been replaced by `outline-style: solid` in the CSS `focus:` pseudo-class in the class `mejs__container`. This change will enable Firefox to show the correct `outline-color` on focus if defined. (#2924)
+
+*6.0.2* (2023/03/06)
+* `outline-style: auto` has been added to the CSS `focus:` pseudo-class to the class `mejs__container` which will enable Firefox to show the correct `outline-color` on focus if defined. Otherwise, it will keep the default color of the browsers. (#2922)
+
+*6.0.1* (2023/02/07)
+* Fixed an error that prevented some mobile devices from reliably selecting chapters and subtitles 
+
+*6.0.0* (2023/01/30)
+* Fix missing video tracks after player is removed
+* Added browser-native subtitle support and removed custom VTT/DFXP parsing
+* Removed support for "slides" tracks which were non-functional 
+* Removed options: "tracksAriaLive", "captionTextPreprocessor", "slidesSelector"
+* Renamed "startLanguage" option to "autoplayCaptionLanguage" for clarity
+* New option "chaptersLanguage" to set the language of the displayed chapters track.
+* new option "defaultTrackLine" to control in which line subtitles are displayed by default 
+* Fixed being able to activate disabled caption-buttons 
+* Fixed "default" track not automatically playing (subtitles and captions tracks only)
+
+*5.1.1 (2023/02/6)*
+* Add focus outline to mejs__container to pass WCAG SC 2.4.7 (#2912)
+
+*5.1.0 (2022/09/07)*
+* Detect when seek has been called by user interaction (#2869)
+* Use of strict mode in language files may lead to javascript error when used in a JS packer (#2870) 
+* Fix container height and width calculation when css is deactivated (#2906)
+
+*5.0.5 (2022/02/07)*
+* Added new option to hide screen reader title optionally (#2899)
+* WCAG: Add empty alt to poster image (#2898)
+
+*5.0.4 (2021/11/04)*
+* Switch data-src to src (PR #2893 Fixed #2891)
+
+*5.0.3 (2021/10/29)*
+* Add attribute `aria-describedby` to horizontal-volume button
+* Reinclude `type="button"` to the button, to prevent submit in forms. 
+* Consistent usage of space and return keys in all browsers (PR #2889 Fixed #2888)
+
+*5.0.2 (2021/10/18)*
+* Reflect correct aria-pressed status of overlay play button when clicked for the first time
+* Reflect toggling aria-pressed status of the overlay play button correctly
+*Minimizing necessary tabs for Firefox by setting audio/video-element to tabindex="-1"
+
+*5.0.1 (2021/10/05)*
+* Fix for fullscreen video not centering in mobile view (#2881)
+* Fix for volume-current and volume-total becoming non-distinguishable with custom high-contrast settings enabled (#2878)
+
+*5.0.0 (2021/09/13)*
+## The WCAG update
+To be WCAG 2.1 compliant we had to introduce breaking changes. We had to create a new solution to improve user defined values for colors and text size in the browser.
+We also improved the semantics and aria attributes for the control bar. By using inline svgs for the control elements we simplified customization with css properties because now `fill:color` and `stroke:color` can be used.
+
+
+* Change default value for fakeNodeName to `div` (#2800)
+* Copy all files from `/demo` folder to `/build` folder with grunt task
+* Replace background sprite for controls with svg icon sprite
+* New option `iconSprite`: path where the svg icon sprite is located, see [standalone documentation](docs/api.md#standalone)
+* Change `px` to `rem` values in styles
+* Add attribute `aria-describedby` to volume button
+
+*4.2.17 (2021/07/05)*
+
+* Fix player.options.startVolume overwritten by 0 (#2783)
+* Fix some html comments typos, Strip out old 404 sources (#2772)
+* Fix issues with fullscreen under Safari (#2762)
+* Get correct mime type for mov files (#2766)
+* Fix enableAutosize:false bug see #2753
+* Fix rare issue with offscreen.remove() #2752
+* Fix DFXP parsing: remove remnants of jQuery use (#2760)
+* Use the same rendererName variable when calculating isNative (#2759)
+* Improve formatting of the release.md docs
 
 *4.2.16 (2020/03/16)*
 
-* fix 4.2.15 release : update version to 4.2.16, rebuild
+* Fix 4.2.15 release : update version to 4.2.16, rebuild
 
 * Changed multiple urls in demo file (#2749)
 * Removed FLV and MP4 No Ext de to 404 replaced HLS due to 404 with Akamai Test stream

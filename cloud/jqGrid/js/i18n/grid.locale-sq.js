@@ -37,7 +37,11 @@ $.jgrid.regional["sq"] = {
 		nomorerecs : "Nuk ka rreshta të tjerë...",
 		scrollPullup: "Tërhiq për lart për të tjerë...",
 		scrollPulldown : "Tërqiq për poshtë për rifreskim...",
-		scrollRefresh : "Lësho për rifreskim..."
+		scrollRefresh : "Lësho për rifreskim...",
+		valT : "checked",
+		valF : "unchecked",
+		selectLine : "Select row",
+		selectAllLines : "Select all rows"
 	},
 	search : {
 		caption: "Kërko...",
@@ -50,8 +54,11 @@ $.jgrid.regional["sq"] = {
 		addsubgrup : "Add subgroup",
 		addrule : "Add rule",
 		delgroup : "Delete group",
-		delrule : "Delete rule"
-
+		delrule : "Delete rule",
+		Close : "Close",
+		Operand : "Operand : ",
+		Operation : "Oper : ",
+		filterFor : "filter for"
 	},
 	edit : {
 		addCaption: "Shto rresht",
@@ -211,7 +218,8 @@ $.jgrid.regional["sq"] = {
 		searchTitle : "Get items with value that:",
 		freeze : "Freeze",
 		unfreeze : "Unfreeze",
-		reorder : "Move to reorder"
+		reorder : "Move to reorder",
+		hovermenu: "Click for column quick actions"
 	}
 };
 }));

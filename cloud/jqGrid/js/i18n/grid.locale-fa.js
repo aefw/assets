@@ -43,7 +43,11 @@ $.jgrid.regional["fa"] = {
 		nomorerecs : "No more records...",
 		scrollPullup: "Pull up to load more...",
 		scrollPulldown : "Pull down to refresh...",
-		scrollRefresh : "Release to refresh..."
+		scrollRefresh : "Release to refresh...",
+		valT : "checked",
+		valF : "unchecked",
+		selectLine : "Select row",
+		selectAllLines : "Select all rows"
         },
         search: {
             caption: "جستجو...",
@@ -63,7 +67,11 @@ $.jgrid.regional["fa"] = {
 			addsubgrup : "Add subgroup",
 			addrule : "Add rule",
 			delgroup : "Delete group",
-			delrule : "Delete rule"
+			delrule : "Delete rule",
+			Close : "Close",
+			Operand : "Operand : ",
+			Operation : "Oper : ",
+			filterFor : "filter for"
         },
         edit: {
             addCaption: "اضافه کردن رکورد",
@@ -195,7 +203,8 @@ $.jgrid.regional["fa"] = {
 		searchTitle : "Get items with value that:",
 		freeze : "Freeze",
 		unfreeze : "Unfreeze",
-		reorder : "Move to reorder"
+		reorder : "Move to reorder",
+		hovermenu: "Click for column quick actions"
 	}
     };
 }));

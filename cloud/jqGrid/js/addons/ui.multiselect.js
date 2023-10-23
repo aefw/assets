@@ -115,7 +115,15 @@ $.widget("ui.multiselect", {
 		
 		// batch actions
 		this.container.find(".remove-all").click(function() {
-			that._populateLists(that.element.find('option').removeAttr('selected'));
+			var options = that.element.find('option:selected');
+			if (that.selectedList.children('li').length > 1) {
+				that.selectedList.children('li').each(function(i) {
+					if ($(this).is(":visible")) $(options[i-1])[ that.useProp ? 'prop' : 'attr' ]('selected', false); 
+				});
+			} else {
+				options[ that.useProp ? 'prop' : 'attr' ]('selected', false);
+			}
+			that._populateLists(that.element.find('option'));
 			return false;
 		});
 		
@@ -163,7 +171,7 @@ $.widget("ui.multiselect", {
 	},
 	_getOptionNode: function(option) {
 		option = $(option);
-		var node = $('<li class="ui-state-default ui-element" title="'+option.text()+'"><span class="ui-icon"/>'+option.text()+'<a href="#" class="action"><span class="ui-corner-all ui-icon"/></a></li>').hide();
+		var node = $('<li class="ui-state-default ui-element" title="'+option.text()+'"><span class="ui-icon"></span>'+option.text()+'<a href="#" class="action"><span class="ui-corner-all ui-icon"></span></a></li>').hide();
 		node.data('optionLink', option);
 		return node;
 	},

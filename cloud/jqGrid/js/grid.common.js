@@ -34,14 +34,6 @@ $.extend($.jgrid,{
 			if (typeof oncret === 'boolean'  && !oncret ) { return; }
 		}
 		if( o.formprop && thisgrid  && o.form) {
-			var fh = $(selector)[0].style.height,
-			fw = $(selector)[0].style.width;
-			if(fh.indexOf("px") > -1 ) {
-				fh = parseFloat(fh);
-			}
-			if(fw.indexOf("px") > -1 ) {
-				fw = parseFloat(fw);
-			}
 			var frmgr, frmdata;
 			if(o.form==='edit'){
 				frmgr = '#' +$.jgrid.jqID("FrmGrid_"+ o.gb.substr(6));
@@ -51,10 +43,10 @@ $.extend($.jgrid,{
 				frmdata = "viewProp";
 			}
 			$(thisgrid).data(frmdata, {
-				top:parseFloat($(selector).css("top")),
-				left : parseFloat($(selector).css("left")),
-				width : fw,
-				height : fh,
+				top: $.jgrid.floatNum($(selector).css("top")),
+				left : $.jgrid.floatNum($(selector).css("left")),
+				width : $.jgrid.floatNum( $(selector)[0].style.width ),
+				height : $.jgrid.floatNum( $(selector)[0].style.height ),
 				dataheight : $(frmgr).height(),
 				datawidth: $(frmgr).width()
 			});
@@ -63,7 +55,9 @@ $.extend($.jgrid,{
 			$(selector).attr("aria-hidden","true").jqmHide();
 		} else {
 			if(o.gb !== '') {
-				try {$(".jqgrid-overlay:first",o.gb).hide();} catch (e){}
+				try {
+					$(o.gb).find(".jqgrid-overlay").first().hide();
+				} catch (e){}
 			}
 			try { $(".jqgrid-overlay-modal").hide(); } catch (e) {}
 			$(selector).hide().attr("aria-hidden","true");
@@ -91,7 +85,7 @@ $.extend($.jgrid,{
 		mh.className = "ui-jqdialog-titlebar " + classes.header;
 		mh.id = aIDs.modalhead;
 		$(mh).append("<span class='ui-jqdialog-title'>"+p.caption+"</span>");
-		var ahr= $("<a class='ui-jqdialog-titlebar-close "+common.cornerall+"'></a>")
+		var ahr= $("<a class='ui-jqdialog-titlebar-close "+common.cornerall+"' aria-label='Close'></a>")
 		.hover(function(){ahr.addClass(common.hover);},
 			function(){ahr.removeClass(common.hover);})
 		.append("<span class='" + common.icon_base+" " + classes.icon_close + "'></span>");
@@ -127,11 +121,14 @@ $.extend($.jgrid,{
 				pos = $.jgrid.findPos(posSelector);
 				p.left = pos[0] + 4;
 				p.top = pos[1] + 4;
+				if( rtlsup && !appendsel) {
+					p.left = $(p.gbox).outerWidth()- (!isNaN(p.width) ? parseInt(p.width,10) :300);// to do
+				}
 			}
 			coord.top = p.top+"px";
-			coord.left = p.left;
+			coord.left = p.left+"px";			
 		} else if(p.left !==0 || p.top!==0) {
-			coord.left = p.left;
+			coord.left = p.left+"px";
 			coord.top = p.top+"px";
 		}
 		$("a.ui-jqdialog-titlebar-close",mh).click(function(){
@@ -143,20 +140,13 @@ $.extend($.jgrid,{
 		if (p.width === 0 || !p.width) {p.width = 300;}
 		if(p.height === 0 || !p.height) {p.height =200;}
 		if(!p.zIndex) {
-			var parentZ = $(insertSelector).parents("*[role=dialog]").filter(':first').css("z-index");
+			var parentZ = $(insertSelector).parents("*[role=dialog]").first().css("z-index");
 			if(parentZ) {
 				p.zIndex = parseInt(parentZ,10)+2;
 			} else {
 				p.zIndex = 950;
 			}
 		}
-		var rtlt = 0;
-		if( rtlsup && coord.left && !appendsel) {
-			rtlt = $(p.gbox).width()- (!isNaN(p.width) ? parseInt(p.width,10) :0) - 8; // to do
-		// just in case
-			coord.left = parseInt(coord.left,10) + parseInt(rtlt,10);
-		}
-		if(coord.left) { coord.left += "px"; }
 		$(mw).css($.extend({
 			width: isNaN(p.width) ? "auto": p.width+"px",
 			height:isNaN(p.height) ? "auto" : p.height + "px",
@@ -238,7 +228,7 @@ $.extend($.jgrid,{
 					}
 					$(".jqgrid-overlay-modal").css("z-index",zInd).show();
 				} else {
-					$(".jqgrid-overlay:first",o.gbox).css("z-index",zInd).show();
+					$(o.gbox).find(".jqgrid-overlay").first().css("z-index",zInd).show();
 					$(selector).data("gbox",o.gbox);
 				}
 			}
@@ -255,8 +245,8 @@ $.extend($.jgrid,{
 			dataheight: 'auto',
 			drag: true,
 			resize: false,
-			left:250,
-			top:170,
+			left:(window.innerWidth / 2) - 145,
+			top:window.innerHeight / 2 - 150,
 			zIndex : 1000,
 			jqModal : true,
 			modal : false,
@@ -323,7 +313,7 @@ $.extend($.jgrid,{
 			function(){$(this).addClass(common.hover);},
 			function(){$(this).removeClass(common.hover);}
 		);
-		if($.isFunction(mopt.beforeOpen) ) { mopt.beforeOpen(); }
+		if($.jgrid.isFunction(mopt.beforeOpen) ) { mopt.beforeOpen(); }
 		$.jgrid.viewModal("#info_dialog",{
 			onHide: function(h) {
 				h.w.hide().remove();
@@ -332,20 +322,21 @@ $.extend($.jgrid,{
 			modal :mopt.modal,
 			jqm:jm
 		});
-		if($.isFunction(mopt.afterOpen) ) { mopt.afterOpen(); }
+		if($.jgrid.isFunction(mopt.afterOpen) ) { mopt.afterOpen(); }
 		try{ $("#info_dialog").focus();} catch (m){}
 	},
 	bindEv: function  (el, opt) {
 		var $t = this;
-		if($.isFunction(opt.dataInit)) {
+		if($.jgrid.isFunction(opt.dataInit)) {
 			opt.dataInit.call($t,el,opt);
 		}
 		if(opt.dataEvents) {
 			$.each(opt.dataEvents, function() {
+				var tfn = this.fn;
 				if (this.data !== undefined) {
-					$(el).on(this.type, this.data, this.fn);
+					$(el).on(this.type, this.data, function(ev) {tfn.call(this, ev, opt);});
 				} else {
-					$(el).on(this.type, this.fn);
+					$(el).on(this.type, function(ev){ tfn.call(this, ev, opt);} );
 				}
 			});
 		}
@@ -356,7 +347,7 @@ $.extend($.jgrid,{
 		function setAttributes(elm, atr, exl ) {
 			var exclude = ['dataInit','dataEvents','dataUrl', 'buildSelect','sopt', 'searchhidden', 'defaultValue', 'attr', 'custom_element', 'custom_value', 'oper'];
 			exclude = exclude.concat(['cacheUrlData','delimiter','separator']);
-			if(exl !== undefined && $.isArray(exl)) {
+			if(exl !== undefined && Array.isArray(exl)) {
 				$.merge(exclude, exl);
 			}
 			$.each(atr, function(key, value){
@@ -408,7 +399,7 @@ $.extend($.jgrid,{
 			break;
 			case "select" :
 				elem = document.createElement("select");
-				elem.setAttribute("role","select");
+				elem.setAttribute("role","listbox");
 				var msl, ovm = [];
 				if(options.multiple===true) {
 					msl = true;
@@ -425,10 +416,10 @@ $.extend($.jgrid,{
 						rowid = $.jgrid.stripPref($t.p.idPrefix, rowid);
 					}
 					$.ajax($.extend({
-						url: $.isFunction(options.dataUrl) ? options.dataUrl.call($t, rowid, vl, String(options.name)) : options.dataUrl,
+						url: $.jgrid.isFunction(options.dataUrl) ? options.dataUrl.call($t, rowid, vl, String(options.name)) : options.dataUrl,
 						type : "GET",
 						dataType: "html",
-						data: $.isFunction(postData) ? postData.call($t, rowid, vl, String(options.name)) : postData,
+						data: $.jgrid.isFunction(postData) ? postData.call($t, rowid, vl, String(options.name)) : postData,
 						context: {elem:elem, options:options, vl:vl},
 						success: function(data){
 							var ovm = [], elem = this.elem, vl = this.vl,
@@ -436,19 +427,20 @@ $.extend($.jgrid,{
 							msl = options.multiple===true,
 							cU = options.cacheUrlData === true,
 							oV ='', txt, mss =[],
-							a = $.isFunction(options.buildSelect) ? options.buildSelect.call($t,data) : data;
+							a = $.jgrid.isFunction(options.buildSelect) ? options.buildSelect.call($t,data) : data;
 							if(typeof a === 'string') {
-								a = $( $.trim( a ) ).html();
+								a = $( $.jgrid.trim( a ) ).html();
 							}
 							if(a) {
 								$(elem).append(a);
 								setAttributes(elem, options, postData ? ['postData'] : undefined );
 								if(options.size === undefined) { options.size =  msl ? 3 : 1;}
 								if(msl) {
-									ovm = vl.split(",");
-									ovm = $.map(ovm,function(n){return $.trim(n);});
+									var multiseparator = options.multiseparator === undefined ? ",": options.multiseparator;
+									ovm = vl.split(multiseparator);									
+									ovm = $.map(ovm,function(n){return $.jgrid.trim(n);});
 								} else {
-									ovm[0] = $.trim(vl);
+									ovm[0] = $.jgrid.trim(vl);
 								}
 								//$(elem).attr(options);
 								//setTimeout(function(){
@@ -462,7 +454,7 @@ $.extend($.jgrid,{
 									// fix IE8/IE7 problem with selecting of the first item on multiple=true
 									if (i === 0 && elem.multiple) { this.selected = false; }
 									$(this).attr("role","option");
-									if($.inArray($.trim(txt),ovm) > -1 || $.inArray($.trim(vl),ovm) > -1 ) {
+									if($.inArray($.jgrid.trim(txt),ovm) > -1 || $.inArray($.jgrid.trim(vl),ovm) > -1 ) {
 										this.selected= "selected";
 										mss.push(vl);
 									}
@@ -503,7 +495,7 @@ $.extend($.jgrid,{
 					}
 					if(msl) {
 						ovm = vl.split(",");
-						ovm = $.map(ovm,function(n){return $.trim(n);});
+						ovm = $.map(ovm,function(n){return $.jgrid.trim(n);});
 					}
 					if(typeof options.value === 'function') { options.value = options.value(); }
 					var so,sv, ov, oSv, key, value,
@@ -518,10 +510,19 @@ $.extend($.jgrid,{
 							}
 							ov = document.createElement("option");
 							ov.setAttribute("role","option");
-							ov.value = sv[0]; ov.innerHTML = sv[1];
+							ov.value = sv[0]; 
+							ov.innerHTML = sv[1];
+							if (sv[1].length == 0) {
+								ov.setAttribute("aria-label","none");
+							}	
 							elem.appendChild(ov);
-							if (!msl &&  ($.trim(sv[0]) === $.trim(vl) || $.trim(sv[1]) === $.trim(vl))) { ov.selected ="selected"; }
-							if (msl && ($.inArray($.trim(sv[1]), ovm)>-1 || $.inArray($.trim(sv[0]), ovm)>-1)) {ov.selected ="selected";}
+							if (!msl &&  
+									($.jgrid.trim(sv[0]) === $.jgrid.trim(vl) || 
+									$.jgrid.trim(sv[1]) === $.jgrid.trim(vl))) {
+
+								ov.selected ="selected"; 
+							}
+							if (msl && ($.inArray($.jgrid.trim(sv[1]), ovm)>-1 || $.inArray($.jgrid.trim(sv[0]), ovm)>-1)) {ov.selected ="selected";}
 						}
 					} else if (Object.prototype.toString.call(options.value) === "[object Array]") {
 						oSv = options.value;
@@ -533,9 +534,12 @@ $.extend($.jgrid,{
 								ov = document.createElement("option");
 								ov.setAttribute("role","option");
 								ov.value = key; ov.innerHTML = value;
+								if (value.length == 0) {
+									ov.setAttribute("aria-label","none");
+								}
 								elem.appendChild(ov);
-								if (!msl &&  ( $.trim(key) === $.trim(vl) || $.trim(value) === $.trim(vl)) ) { ov.selected ="selected"; }
-								if (msl && ($.inArray($.trim(value),ovm)>-1 || $.inArray($.trim(key),ovm)>-1)) { ov.selected ="selected"; }
+								if (!msl &&  ( $.jgrid.trim(key) === $.jgrid.trim(vl) || $.jgrid.trim(value) === $.jgrid.trim(vl)) ) { ov.selected ="selected"; }
+								if (msl && ($.inArray($.jgrid.trim(value),ovm)>-1 || $.inArray($.jgrid.trim(key),ovm)>-1)) { ov.selected ="selected"; }
 							}
 						}
 					} else if (typeof options.value === 'object') {
@@ -545,9 +549,12 @@ $.extend($.jgrid,{
 								ov = document.createElement("option");
 								ov.setAttribute("role","option");
 								ov.value = key; ov.innerHTML = oSv[key];
+								if (oSv[key].length == 0) {
+									ov.setAttribute("aria-label","none");
+								}
 								elem.appendChild(ov);
-								if (!msl &&  ( $.trim(key) === $.trim(vl) || $.trim(oSv[key]) === $.trim(vl)) ) { ov.selected ="selected"; }
-								if (msl && ($.inArray($.trim(oSv[key]),ovm)>-1 || $.inArray($.trim(key),ovm)>-1)) { ov.selected ="selected"; }
+								if (!msl &&  ( $.jgrid.trim(key) === $.jgrid.trim(vl) || $.jgrid.trim(oSv[key]) === $.jgrid.trim(vl)) ) { ov.selected ="selected"; }
+								if (msl && ($.inArray($.jgrid.trim(oSv[key]),ovm)>-1 || $.inArray($.jgrid.trim(key),ovm)>-1)) { ov.selected ="selected"; }
 							}
 						}
 					}
@@ -565,7 +572,7 @@ $.extend($.jgrid,{
 			case "custom" :
 				elem = document.createElement("span");
 				try {
-					if($.isFunction(options.custom_element)) {
+					if($.jgrid.isFunction(options.custom_element)) {
 						var celm = options.custom_element.call($t,vl,options);
 						if(celm) {
 							celm = $(celm).addClass("customelement").attr({id:options.id,name:options.name});
@@ -698,7 +705,7 @@ $.extend($.jgrid,{
 		var edtrul,i, nm, dft, len, g = this, cm = g.p.colModel,
 		msg = $.jgrid.getRegional(this, 'edit.msg'), fmtdate,
 		isNum = function(vn) {
-			var vn = vn.toString();
+			vn = vn.toString();
 			if(vn.length >= 2) {
 				var chkv, dot;
 				if(vn[0] === "-" ) {
@@ -712,7 +719,7 @@ $.extend($.jgrid,{
 					return false; //octal
 				} 
 			}
-			return typeof parseFloat(vn) === 'number' && isFinite(vn); 
+			return typeof Number(vn) === 'number' && isFinite(vn); 
 		};
 
 		if(customobject === undefined) {
@@ -745,10 +752,10 @@ $.extend($.jgrid,{
 				}
 			}
 			if(edtrul.minValue !== undefined && !isNaN(edtrul.minValue)) {
-				if (parseFloat(val) < parseFloat(edtrul.minValue) ) { return [false,nm+": "+msg.minValue+" "+edtrul.minValue,""];}
+				if ($.jgrid.floatNum(val) < $.jgrid.floatNum(edtrul.minValue) ) { return [false,nm+": "+msg.minValue+" "+edtrul.minValue,""];}
 			}
 			if(edtrul.maxValue !== undefined && !isNaN(edtrul.maxValue)) {
-				if (parseFloat(val) > parseFloat(edtrul.maxValue) ) { return [false,nm+": "+msg.maxValue+" "+edtrul.maxValue,""];}
+				if ($.jgrid.floatNum(val) > $.jgrid.floatNum(edtrul.maxValue) ) { return [false,nm+": "+msg.maxValue+" "+edtrul.maxValue,""];}
 			}
 			var filter;
 			if(edtrul.email === true) {
@@ -791,9 +798,9 @@ $.extend($.jgrid,{
 			}
 			if(edtrul.custom === true) {
 				if( !(rqfield === false && $.jgrid.isEmpty(val)) ) {
-					if($.isFunction(edtrul.custom_func)) {
+					if($.jgrid.isFunction(edtrul.custom_func)) {
 						var ret = edtrul.custom_func.call(g,val,nm,valref);
-						return $.isArray(ret) ? ret : [false,msg.customarray,""];
+						return Array.isArray(ret) ? ret : [false,msg.customarray,""];
 					}
 					return [false,msg.customfcheck,""];
 				}
@@ -910,6 +917,16 @@ $.extend($.jgrid,{
 				ret = i;
 				break;
 			}
+		}
+		return ret;
+	},
+	getLastVisibleCol : function( $t ) {
+		var ret = -1;
+		for(var i = $t.p.colModel.length - 1; i>=0; i--) {
+			if($t.p.colModel[i].hidden !== true ) {
+				ret = i;
+				break;
+	}	
 		}
 		return ret;
 	}	

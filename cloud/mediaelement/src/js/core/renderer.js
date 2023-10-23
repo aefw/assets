@@ -43,14 +43,12 @@ class Renderer {
 		renderers = renderers.length ? renderers: this.order;
 
 		// If renderers are not set, set a default order:
-		// 1) Native renderers (HTML5, HLS, M(PEG)-DASH, FLV)
-		// 2) Flash shims (RTMP, FLV, HLS, M(PEG)-DASH, MP3, OGG)
-		// 3) Iframe renderers (YouTube, SoundCloud, Facebook. etc.)
+		// 1) Native renderers (HTML5, HLS, M(PEG)-DASH)
+		// 2) Iframe renderers (YouTube, SoundCloud, Facebook. etc.)
 		if (!renderersLength) {
 			const
 				rendererIndicator = [
 					/^(html5|native)/i,
-					/^flash/i,
 					/iframe$/i,
 				],
 				rendererRanking = (renderer) => {
@@ -76,6 +74,7 @@ class Renderer {
 
 			if (renderer !== null && renderer !== undefined) {
 				for (let j = 0, jl = mediaFiles.length; j < jl; j++) {
+
 					if (typeof renderer.canPlayType === 'function' && typeof mediaFiles[j].type === 'string' &&
 						renderer.canPlayType(mediaFiles[j].type)) {
 						return {

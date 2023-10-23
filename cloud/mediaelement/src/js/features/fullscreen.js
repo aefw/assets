@@ -9,13 +9,14 @@ import * as Features from '../utils/constants';
 import {isString, createEvent} from '../utils/general';
 import {addClass, removeClass} from '../utils/dom';
 import {getTypeFromFile} from '../utils/media';
+import {generateControlButton} from '../utils/generate';
 
 
 /**
  * Fullscreen button
  *
  * This feature creates a button to toggle fullscreen on video; it considers a letiety of possibilities when dealing with it
- * since it is not consistent across browsers. It also accounts for triggering the event through Flash shim.
+ * since it is not consistent across browsers.
  */
 
 // Feature configuration
@@ -85,9 +86,8 @@ Object.assign(MediaElementPlayer.prototype, {
 			fullscreenTitle = isString(t.options.fullscreenText) ? t.options.fullscreenText : i18n.t('mejs.fullscreen'),
 			fullscreenBtn = document.createElement('div')
 		;
-
 		fullscreenBtn.className = `${t.options.classPrefix}button ${t.options.classPrefix}fullscreen-button`;
-		fullscreenBtn.innerHTML = `<button type="button" aria-controls="${t.id}" title="${fullscreenTitle}" aria-label="${fullscreenTitle}" tabindex="0"></button>`;
+		fullscreenBtn.innerHTML = generateControlButton(t.id, fullscreenTitle, fullscreenTitle, `${t.media.options.iconSprite}`, ['icon-fullscreen', 'icon-unfullscreen'], `${t.options.classPrefix}`);
 		t.addControlElement(fullscreenBtn, 'fullscreen');
 
 		fullscreenBtn.addEventListener('click', () => {
