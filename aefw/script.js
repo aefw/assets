@@ -94,6 +94,23 @@ function asset_dir_url() {
 	return src;
 }
 
+if( typeof(time)==='undefined' ) {
+	function time() {
+		now = new Date();
+		return now.getTime();
+	}
+}
+
+function escape_string(string) {
+	return string.replace(/\\/g, '\\\\').
+        replace(/\u0008/g, '\\b').
+        replace(/\t/g, '\\t').
+        replace(/\n/g, '\\n').
+        replace(/\f/g, '\\f').
+        replace(/\r/g, '\\r').
+        replace(/'/g, '\\\'').
+        replace(/"/g, '\\"');
+}
 // END AEFW
 
 $(document).ready(function(e) {
